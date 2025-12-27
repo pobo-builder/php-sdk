@@ -1,5 +1,9 @@
 # Pobo PHP SDK
 
+[![Tests](https://github.com/pobo-builder/php-sdk/actions/workflows/tests.yml/badge.svg)](https://github.com/pobo-builder/php-sdk/actions/workflows/tests.yml)
+[![Latest Stable Version](https://poser.pugx.org/pobo-builder/php-sdk/v/stable)](https://packagist.org/packages/pobo-builder/php-sdk)
+[![License](https://poser.pugx.org/pobo-builder/php-sdk/license)](https://packagist.org/packages/pobo-builder/php-sdk)
+
 Official PHP SDK for [Pobo API V2](https://api.pobo.space) - product content management and webhooks.
 
 ## Requirements
@@ -11,7 +15,7 @@ Official PHP SDK for [Pobo API V2](https://api.pobo.space) - product content man
 ## Installation
 
 ```bash
-composer require pobo/php-sdk
+composer require pobo-builder/php-sdk
 ```
 
 ## Quick Start

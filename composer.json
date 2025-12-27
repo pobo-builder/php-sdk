@@ -10,12 +10,18 @@
         "ecommerce",
         "product-content"
     ],
+    "homepage": "https://github.com/pobo-builder/php-sdk",
     "authors": [
         {
             "name": "Pobo",
-            "email": "support@pobo.cz"
+            "email": "support@pobo.cz",
+            "homepage": "https://pobo.cz"
         }
     ],
+    "support": {
+        "issues": "https://github.com/pobo-builder/php-sdk/issues",
+        "source": "https://github.com/pobo-builder/php-sdk"
+    },
     "require": {
         "php": "^8.1",
         "ext-curl": "*",
