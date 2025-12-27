@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace Pobo\Sdk\DTO;
 
-readonly class Product
+final class Product
 {
     /**
      * @param array<string> $images
@@ -13,22 +13,22 @@ readonly class Product
      * @param array<array{id: string, name: array<string, string>}> $categories
      */
     public function __construct(
-        public string $id,
-        public bool $isVisible,
-        public LocalizedString $name,
-        public LocalizedString $url,
-        public ?LocalizedString $shortDescription = null,
-        public ?LocalizedString $description = null,
-        public ?LocalizedString $seoTitle = null,
-        public ?LocalizedString $seoDescription = null,
-        public array $images = [],
-        public array $categoriesIds = [],
-        public array $parametersIds = [],
-        public ?string $guid = null,
-        public ?bool $isLoaded = null,
-        public array $categories = [],
-        public ?\DateTimeInterface $createdAt = null,
-        public ?\DateTimeInterface $updatedAt = null,
+        public readonly string $id,
+        public readonly bool $isVisible,
+        public readonly LocalizedString $name,
+        public readonly LocalizedString $url,
+        public readonly ?LocalizedString $shortDescription = null,
+        public readonly ?LocalizedString $description = null,
+        public readonly ?LocalizedString $seoTitle = null,
+        public readonly ?LocalizedString $seoDescription = null,
+        public readonly array $images = [],
+        public readonly array $categoriesIds = [],
+        public readonly array $parametersIds = [],
+        public readonly ?string $guid = null,
+        public readonly ?bool $isLoaded = null,
+        public readonly array $categories = [],
+        public readonly ?\DateTimeInterface $createdAt = null,
+        public readonly ?\DateTimeInterface $updatedAt = null,
     ) {
     }
 

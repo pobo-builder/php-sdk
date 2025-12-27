@@ -6,12 +6,12 @@ namespace Pobo\Sdk\DTO;
 
 use Pobo\Sdk\Enum\WebhookEvent;
 
-readonly class WebhookPayload
+final class WebhookPayload
 {
     public function __construct(
-        public WebhookEvent $event,
-        public \DateTimeInterface $timestamp,
-        public int $eshopId,
+        public readonly WebhookEvent $event,
+        public readonly \DateTimeInterface $timestamp,
+        public readonly int $eshopId,
     ) {
     }
 

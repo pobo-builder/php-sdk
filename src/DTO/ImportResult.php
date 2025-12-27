@@ -4,19 +4,19 @@ declare(strict_types=1);
 
 namespace Pobo\Sdk\DTO;
 
-readonly class ImportResult
+final class ImportResult
 {
     /**
      * @param array<array{index: int, id: string, errors: array<string>}> $errors
      */
     public function __construct(
-        public bool $success,
-        public int $imported,
-        public int $updated,
-        public int $skipped,
-        public array $errors = [],
-        public ?int $valuesImported = null,
-        public ?int $valuesUpdated = null,
+        public readonly bool $success,
+        public readonly int $imported,
+        public readonly int $updated,
+        public readonly int $skipped,
+        public readonly array $errors = [],
+        public readonly ?int $valuesImported = null,
+        public readonly ?int $valuesUpdated = null,
     ) {
     }
 

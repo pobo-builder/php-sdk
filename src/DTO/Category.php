@@ -4,23 +4,23 @@ declare(strict_types=1);
 
 namespace Pobo\Sdk\DTO;
 
-readonly class Category
+final class Category
 {
     /**
      * @param array<string> $images
      */
     public function __construct(
-        public string $id,
-        public bool $isVisible,
-        public LocalizedString $name,
-        public LocalizedString $url,
-        public ?LocalizedString $description = null,
-        public ?LocalizedString $seoTitle = null,
-        public ?LocalizedString $seoDescription = null,
-        public array $images = [],
-        public ?string $guid = null,
-        public ?\DateTimeInterface $createdAt = null,
-        public ?\DateTimeInterface $updatedAt = null,
+        public readonly string $id,
+        public readonly bool $isVisible,
+        public readonly LocalizedString $name,
+        public readonly LocalizedString $url,
+        public readonly ?LocalizedString $description = null,
+        public readonly ?LocalizedString $seoTitle = null,
+        public readonly ?LocalizedString $seoDescription = null,
+        public readonly array $images = [],
+        public readonly ?string $guid = null,
+        public readonly ?\DateTimeInterface $createdAt = null,
+        public readonly ?\DateTimeInterface $updatedAt = null,
     ) {
     }
 
