@@ -24,8 +24,6 @@ composer require pobo-builder/php-sdk
 
 ```php
 use Pobo\Sdk\PoboClient;
-use Pobo\Sdk\DTO\Product;
-use Pobo\Sdk\DTO\LocalizedString;
 
 $client = new PoboClient(
     apiToken: 'your-api-token',
@@ -34,31 +32,47 @@ $client = new PoboClient(
 );
 ```
 
-### Import Parameters
+## Import
 
-Import parameters first (no dependencies).
+### Import Order
+
+```
+1. Parameters (no dependencies)
+2. Categories (no dependencies)
+3. Products (depends on categories and parameters)
+4. Blogs (no dependencies)
+```
+
+### Import Parameters
 
 ```php
 use Pobo\Sdk\DTO\Parameter;
 use Pobo\Sdk\DTO\ParameterValue;
 
-$parameter = new Parameter(
-    id: 1,
-    name: 'Color',
-    values: [
-        new ParameterValue(id: 1, value: 'Red'),
-        new ParameterValue(id: 2, value: 'Blue'),
-        new ParameterValue(id: 3, value: 'Green'),
-    ],
-);
+$parameters = [
+    new Parameter(
+        id: 1,
+        name: 'Color',
+        values: [
+            new ParameterValue(id: 1, value: 'Red'),
+            new ParameterValue(id: 2, value: 'Blue'),
+        ],
+    ),
+    new Parameter(
+        id: 2,
+        name: 'Size',
+        values: [
+            new ParameterValue(id: 3, value: 'S'),
+            new ParameterValue(id: 4, value: 'M'),
+        ],
+    ),
+];
 
-$result = $client->importParameters([$parameter]);
-echo sprintf('Values imported: %d', $result->valuesImported);
+$result = $client->importParameters($parameters);
+echo sprintf('Imported: %d, Values: %d', $result->imported, $result->valuesImported);
 ```
 
 ### Import Categories
-
-Import categories second (no dependencies).
 
 ```php
 use Pobo\Sdk\DTO\Category;
@@ -75,7 +89,9 @@ $categories = [
         url: LocalizedString::create('https://example.com/electronics')
             ->withTranslation(Language::CS, 'https://example.com/cs/elektronika')
             ->withTranslation(Language::SK, 'https://example.com/sk/elektronika'),
-        description: LocalizedString::create('<p>All electronics</p>'),
+        description: LocalizedString::create('<p>All electronics</p>')
+            ->withTranslation(Language::CS, '<p>Veškerá elektronika</p>')
+            ->withTranslation(Language::SK, '<p>Všetka elektronika</p>'),
         images: ['https://example.com/images/electronics.jpg'],
     ),
     new Category(
@@ -96,8 +112,6 @@ echo sprintf('Imported: %d, Updated: %d', $result->imported, $result->updated);
 
 ### Import Products
 
-Import products last (depends on categories and parameters IDs).
-
 ```php
 use Pobo\Sdk\DTO\Product;
 use Pobo\Sdk\DTO\LocalizedString;
@@ -116,10 +130,10 @@ $products = [
         shortDescription: LocalizedString::create('Latest iPhone model')
             ->withTranslation(Language::CS, 'Nejnovější model iPhone')
             ->withTranslation(Language::SK, 'Najnovší model iPhone'),
-        images: [
-            'https://example.com/images/iphone-1.jpg',
-            'https://example.com/images/iphone-2.jpg',
-        ],
+        description: LocalizedString::create('<p>The best iPhone ever.</p>')
+            ->withTranslation(Language::CS, '<p>Nejlepší iPhone vůbec.</p>')
+            ->withTranslation(Language::SK, '<p>Najlepší iPhone vôbec.</p>'),
+        images: ['https://example.com/images/iphone-1.jpg'],
         categoriesIds: ['CAT-001', 'CAT-002'],
         parametersIds: [1, 2],
     ),
@@ -132,13 +146,7 @@ $products = [
         url: LocalizedString::create('https://example.com/samsung-s24')
             ->withTranslation(Language::CS, 'https://example.com/cs/samsung-s24')
             ->withTranslation(Language::SK, 'https://example.com/sk/samsung-s24'),
-        shortDescription: LocalizedString::create('Flagship Android phone')
-            ->withTranslation(Language::CS, 'Vlajková loď Android')
-            ->withTranslation(Language::SK, 'Vlajková loď Android'),
-        images: [
-            'https://example.com/images/samsung-1.jpg',
-        ],
-        categoriesIds: ['CAT-001', 'CAT-002'],
+        categoriesIds: ['CAT-001'],
         parametersIds: [1, 3],
     ),
 ];
@@ -147,17 +155,56 @@ $result = $client->importProducts($products);
 
 if ($result->hasErrors() === true) {
     foreach ($result->errors as $error) {
-        echo sprintf('Error at index %d: %s', $error['index'], implode(', ', $error['errors']));
+        echo sprintf('Error: %s', implode(', ', $error['errors']));
     }
 }
+```
 
+### Import Blogs
+
+```php
+use Pobo\Sdk\DTO\Blog;
+use Pobo\Sdk\DTO\LocalizedString;
+use Pobo\Sdk\Enum\Language;
+
+$blogs = [
+    new Blog(
+        guid: '550e8400-e29b-41d4-a716-446655440000',
+        category: 'news',
+        isVisible: true,
+        name: LocalizedString::create('New Product Launch')
+            ->withTranslation(Language::CS, 'Uvedení nového produktu')
+            ->withTranslation(Language::SK, 'Uvedenie nového produktu'),
+        url: LocalizedString::create('https://example.com/blog/new-product')
+            ->withTranslation(Language::CS, 'https://example.com/cs/blog/novy-produkt')
+            ->withTranslation(Language::SK, 'https://example.com/sk/blog/novy-produkt'),
+        description: LocalizedString::create('<p>We are excited to announce...</p>')
+            ->withTranslation(Language::CS, '<p>S radostí oznamujeme...</p>')
+            ->withTranslation(Language::SK, '<p>S radosťou oznamujeme...</p>'),
+        images: ['https://example.com/images/blog-1.jpg'],
+    ),
+    new Blog(
+        guid: '550e8400-e29b-41d4-a716-446655440001',
+        category: 'tips',
+        isVisible: true,
+        name: LocalizedString::create('How to Choose')
+            ->withTranslation(Language::CS, 'Jak vybrat')
+            ->withTranslation(Language::SK, 'Ako vybrať'),
+        url: LocalizedString::create('https://example.com/blog/how-to-choose')
+            ->withTranslation(Language::CS, 'https://example.com/cs/blog/jak-vybrat')
+            ->withTranslation(Language::SK, 'https://example.com/sk/blog/ako-vybrat'),
+    ),
+];
+
+$result = $client->importBlogs($blogs);
 echo sprintf('Imported: %d, Updated: %d', $result->imported, $result->updated);
 ```
+
+## Export
 
 ### Export Products
 
 ```php
-// Get single page
 $response = $client->getProducts(page: 1, perPage: 50);
 
 foreach ($response->data as $product) {
@@ -182,7 +229,6 @@ $response = $client->getProducts(isEdited: true);
 ### Export Categories
 
 ```php
-// Get all categories
 $response = $client->getCategories();
 
 foreach ($response->data as $category) {
@@ -191,7 +237,61 @@ foreach ($response->data as $category) {
 
 // Iterate through all categories
 foreach ($client->iterateCategories() as $category) {
-    // Process category
+    processCategory($category);
+}
+```
+
+### Export Blogs
+
+```php
+$response = $client->getBlogs();
+
+foreach ($response->data as $blog) {
+    echo sprintf("%d: %s\n", $blog->id, $blog->name->getDefault());
+}
+
+// Iterate through all blogs
+foreach ($client->iterateBlogs() as $blog) {
+    processBlog($blog);
+}
+```
+
+## Content (HTML/Marketplace)
+
+Products, categories, and blogs include a `content` field with generated HTML content for web and marketplace:
+
+```php
+use Pobo\Sdk\Enum\Language;
+
+foreach ($client->iterateProducts() as $product) {
+    if ($product->content !== null) {
+        // Get HTML content for web
+        $htmlCs = $product->content->getHtml(Language::CS);
+        $htmlSk = $product->content->getHtml(Language::SK);
+        $htmlEn = $product->content->getHtml(Language::EN);
+
+        // Get content for marketplace
+        $marketplaceCs = $product->content->getMarketplace(Language::CS);
+        $marketplaceSk = $product->content->getMarketplace(Language::SK);
+
+        // Get default content
+        $htmlDefault = $product->content->getHtmlDefault();
+        $marketplaceDefault = $product->content->getMarketplaceDefault();
+    }
+}
+
+// Same for categories
+foreach ($client->iterateCategories() as $category) {
+    if ($category->content !== null) {
+        echo $category->content->getHtml(Language::CS);
+    }
+}
+
+// Same for blogs
+foreach ($client->iterateBlogs() as $blog) {
+    if ($blog->content !== null) {
+        echo $blog->content->getHtml(Language::CS);
+    }
 }
 ```
 
@@ -207,14 +307,7 @@ use Pobo\Sdk\Exception\WebhookException;
 $handler = new WebhookHandler(webhookSecret: 'your-webhook-secret');
 
 try {
-    // Handle from global PHP variables
     $payload = $handler->handleFromGlobals();
-
-    // Or handle manually
-    $payload = $handler->handle(
-        payload: file_get_contents('php://input'),
-        signature: $_SERVER['HTTP_X_WEBHOOK_SIGNATURE'] ?? ''
-    );
 
     match ($payload->event) {
         WebhookEvent::PRODUCTS_UPDATE => syncProducts($client),
@@ -228,6 +321,15 @@ try {
     http_response_code(401);
     echo json_encode(['error' => $e->getMessage()]);
 }
+```
+
+### Manual Handling
+
+```php
+$payload = $handler->handle(
+    payload: file_get_contents('php://input'),
+    signature: $_SERVER['HTTP_X_WEBHOOK_SIGNATURE'] ?? ''
+);
 ```
 
 ### Webhook Payload
@@ -248,19 +350,15 @@ use Pobo\Sdk\Exception\WebhookException;
 try {
     $result = $client->importProducts($products);
 } catch (ValidationException $e) {
-    // Local validation error (e.g., too many items)
     echo sprintf('Validation error: %s', $e->getMessage());
     print_r($e->errors);
 } catch (ApiException $e) {
-    // API error (4xx, 5xx)
     echo sprintf('API error (%d): %s', $e->httpCode, $e->getMessage());
     print_r($e->responseBody);
 }
 ```
 
 ## Localized Strings
-
-The SDK uses `LocalizedString` for multi-language support:
 
 ```php
 use Pobo\Sdk\DTO\LocalizedString;
@@ -292,6 +390,21 @@ $name->toArray();            // ['default' => '...', 'cs' => '...', ...]
 | `de`      | German             |
 | `pl`      | Polish             |
 | `hu`      | Hungarian          |
+
+## API Methods
+
+| Method                                                                                 | Description                      |
+|----------------------------------------------------------------------------------------|----------------------------------|
+| `importProducts(array $products)`                                                      | Bulk import products (max 100)   |
+| `importCategories(array $categories)`                                                  | Bulk import categories (max 100) |
+| `importParameters(array $parameters)`                                                  | Bulk import parameters (max 100) |
+| `importBlogs(array $blogs)`                                                            | Bulk import blogs (max 100)      |
+| `getProducts(?int $page, ?int $perPage, ?DateTime $lastUpdateFrom, ?bool $isEdited)`   | Get products page                |
+| `getCategories(?int $page, ?int $perPage, ?DateTime $lastUpdateFrom, ?bool $isEdited)` | Get categories page              |
+| `getBlogs(?int $page, ?int $perPage, ?DateTime $lastUpdateFrom, ?bool $isEdited)`      | Get blogs page                   |
+| `iterateProducts(?DateTime $lastUpdateFrom, ?bool $isEdited)`                          | Iterate all products             |
+| `iterateCategories(?DateTime $lastUpdateFrom, ?bool $isEdited)`                        | Iterate all categories           |
+| `iterateBlogs(?DateTime $lastUpdateFrom, ?bool $isEdited)`                             | Iterate all blogs                |
 
 ## Limits
 
