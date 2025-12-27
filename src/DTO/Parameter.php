@@ -4,15 +4,15 @@ declare(strict_types=1);
 
 namespace Pobo\Sdk\DTO;
 
-readonly class Parameter
+final class Parameter
 {
     /**
      * @param array<ParameterValue> $values
      */
     public function __construct(
-        public int $id,
-        public string $name,
-        public array $values,
+        public readonly int $id,
+        public readonly string $name,
+        public readonly array $values,
     ) {
     }
 

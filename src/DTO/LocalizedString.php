@@ -6,13 +6,13 @@ namespace Pobo\Sdk\DTO;
 
 use Pobo\Sdk\Enum\Language;
 
-readonly class LocalizedString
+final class LocalizedString
 {
     /**
      * @param array<string, string|null> $values
      */
     public function __construct(
-        private array $values,
+        private readonly array $values,
     ) {
     }
 

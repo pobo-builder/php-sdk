@@ -4,16 +4,16 @@ declare(strict_types=1);
 
 namespace Pobo\Sdk\DTO;
 
-readonly class PaginatedResponse
+final class PaginatedResponse
 {
     /**
      * @param array<Product|Category> $data
      */
     public function __construct(
-        public array $data,
-        public int $currentPage,
-        public int $perPage,
-        public int $total,
+        public readonly array $data,
+        public readonly int $currentPage,
+        public readonly int $perPage,
+        public readonly int $total,
     ) {
     }
 

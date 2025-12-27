@@ -1,5 +1,9 @@
 # Pobo PHP SDK
 
+[![Tests](https://github.com/pobo-builder/php-sdk/actions/workflows/tests.yml/badge.svg)](https://github.com/pobo-builder/php-sdk/actions/workflows/tests.yml)
+[![Latest Stable Version](https://poser.pugx.org/pobo-builder/php-sdk/v/stable)](https://packagist.org/packages/pobo-builder/php-sdk)
+[![License](https://poser.pugx.org/pobo-builder/php-sdk/license)](https://packagist.org/packages/pobo-builder/php-sdk)
+
 Official PHP SDK for [Pobo API V2](https://api.pobo.space) - product content management and webhooks.
 
 ## Requirements
@@ -11,7 +15,7 @@ Official PHP SDK for [Pobo API V2](https://api.pobo.space) - product content man
 ## Installation
 
 ```bash
-composer require pobo/php-sdk
+composer require pobo-builder/php-sdk
 ```
 
 ## Quick Start
@@ -59,16 +63,35 @@ Import categories second (no dependencies).
 ```php
 use Pobo\Sdk\DTO\Category;
 use Pobo\Sdk\DTO\LocalizedString;
+use Pobo\Sdk\Enum\Language;
 
-$category = new Category(
-    id: 'CAT-001',
-    isVisible: true,
-    name: LocalizedString::create('Electronics'),
-    url: LocalizedString::create('https://example.com/electronics'),
-    description: LocalizedString::create('<p>All electronics</p>'),
-);
+$categories = [
+    new Category(
+        id: 'CAT-001',
+        isVisible: true,
+        name: LocalizedString::create('Electronics')
+            ->withTranslation(Language::CS, 'Elektronika')
+            ->withTranslation(Language::SK, 'Elektronika'),
+        url: LocalizedString::create('https://example.com/electronics')
+            ->withTranslation(Language::CS, 'https://example.com/cs/elektronika')
+            ->withTranslation(Language::SK, 'https://example.com/sk/elektronika'),
+        description: LocalizedString::create('<p>All electronics</p>'),
+        images: ['https://example.com/images/electronics.jpg'],
+    ),
+    new Category(
+        id: 'CAT-002',
+        isVisible: true,
+        name: LocalizedString::create('Phones')
+            ->withTranslation(Language::CS, 'Telefony')
+            ->withTranslation(Language::SK, 'Telefóny'),
+        url: LocalizedString::create('https://example.com/phones')
+            ->withTranslation(Language::CS, 'https://example.com/cs/telefony')
+            ->withTranslation(Language::SK, 'https://example.com/sk/telefony'),
+    ),
+];
 
-$result = $client->importCategories([$category]);
+$result = $client->importCategories($categories);
+echo sprintf('Imported: %d, Updated: %d', $result->imported, $result->updated);
 ```
 
 ### Import Products
@@ -80,35 +103,47 @@ use Pobo\Sdk\DTO\Product;
 use Pobo\Sdk\DTO\LocalizedString;
 use Pobo\Sdk\Enum\Language;
 
-// Using DTO objects
-$product = new Product(
-    id: 'PROD-001',
-    isVisible: true,
-    name: LocalizedString::create('iPhone 15')
-        ->withTranslation(Language::SK, 'iPhone 15')
-        ->withTranslation(Language::EN, 'iPhone 15'),
-    url: LocalizedString::create('https://example.com/iphone-15')
-        ->withTranslation(Language::SK, 'https://example.com/sk/iphone-15'),
-    shortDescription: LocalizedString::create('Latest iPhone model'),
-    images: [
-        'https://example.com/images/iphone-1.jpg',
-        'https://example.com/images/iphone-2.jpg',
-    ],
-    categoriesIds: ['CAT-001', 'CAT-002'],
-    parametersIds: [1, 2, 3],
-);
+$products = [
+    new Product(
+        id: 'PROD-001',
+        isVisible: true,
+        name: LocalizedString::create('iPhone 15')
+            ->withTranslation(Language::CS, 'iPhone 15')
+            ->withTranslation(Language::SK, 'iPhone 15'),
+        url: LocalizedString::create('https://example.com/iphone-15')
+            ->withTranslation(Language::CS, 'https://example.com/cs/iphone-15')
+            ->withTranslation(Language::SK, 'https://example.com/sk/iphone-15'),
+        shortDescription: LocalizedString::create('Latest iPhone model')
+            ->withTranslation(Language::CS, 'Nejnovější model iPhone')
+            ->withTranslation(Language::SK, 'Najnovší model iPhone'),
+        images: [
+            'https://example.com/images/iphone-1.jpg',
+            'https://example.com/images/iphone-2.jpg',
+        ],
+        categoriesIds: ['CAT-001', 'CAT-002'],
+        parametersIds: [1, 2],
+    ),
+    new Product(
+        id: 'PROD-002',
+        isVisible: true,
+        name: LocalizedString::create('Samsung Galaxy S24')
+            ->withTranslation(Language::CS, 'Samsung Galaxy S24')
+            ->withTranslation(Language::SK, 'Samsung Galaxy S24'),
+        url: LocalizedString::create('https://example.com/samsung-s24')
+            ->withTranslation(Language::CS, 'https://example.com/cs/samsung-s24')
+            ->withTranslation(Language::SK, 'https://example.com/sk/samsung-s24'),
+        shortDescription: LocalizedString::create('Flagship Android phone')
+            ->withTranslation(Language::CS, 'Vlajková loď Android')
+            ->withTranslation(Language::SK, 'Vlajková loď Android'),
+        images: [
+            'https://example.com/images/samsung-1.jpg',
+        ],
+        categoriesIds: ['CAT-001', 'CAT-002'],
+        parametersIds: [1, 3],
+    ),
+];
 
-$result = $client->importProducts([$product]);
-
-// Or using arrays
-$result = $client->importProducts([
-    [
-        'id' => 'PROD-002',
-        'is_visible' => true,
-        'name' => ['default' => 'Samsung Galaxy S24'],
-        'url' => ['default' => 'https://example.com/samsung-s24'],
-    ],
-]);
+$result = $client->importProducts($products);
 
 if ($result->hasErrors() === true) {
     foreach ($result->errors as $error) {
@@ -248,28 +283,28 @@ $name->toArray();            // ['default' => '...', 'cs' => '...', ...]
 
 ### Supported Languages
 
-| Code | Language |
-|------|----------|
+| Code      | Language           |
+|-----------|--------------------|
 | `default` | Default (required) |
-| `cs` | Czech |
-| `sk` | Slovak |
-| `en` | English |
-| `de` | German |
-| `pl` | Polish |
-| `hu` | Hungarian |
+| `cs`      | Czech              |
+| `sk`      | Slovak             |
+| `en`      | English            |
+| `de`      | German             |
+| `pl`      | Polish             |
+| `hu`      | Hungarian          |
 
 ## Limits
 
-| Limit | Value |
-|-------|-------|
-| Max items per import request | 100 |
-| Max items per export page | 100 |
-| Product/Category ID length | 255 chars |
-| Name length | 250 chars |
-| URL length | 255 chars |
-| Image URL length | 650 chars |
-| Description length | 65,000 chars |
-| SEO description length | 500 chars |
+| Limit                        | Value        |
+|------------------------------|--------------|
+| Max items per import request | 100          |
+| Max items per export page    | 100          |
+| Product/Category ID length   | 255 chars    |
+| Name length                  | 250 chars    |
+| URL length                   | 255 chars    |
+| Image URL length             | 650 chars    |
+| Description length           | 65,000 chars |
+| SEO description length       | 500 chars    |
 
 ## License
 
