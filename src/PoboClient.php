@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Pobo\Sdk;
 
+use Pobo\Sdk\DTO\Blog;
 use Pobo\Sdk\DTO\Category;
 use Pobo\Sdk\DTO\ImportResult;
 use Pobo\Sdk\DTO\PaginatedResponse;
@@ -26,8 +27,6 @@ class PoboClient
     }
 
     /**
-     * Import products in bulk (max 100 items per request)
-     *
      * @param array<Product|array<string, mixed>> $products
      * @throws ValidationException
      * @throws ApiException
@@ -46,8 +45,6 @@ class PoboClient
     }
 
     /**
-     * Import categories in bulk (max 100 items per request)
-     *
      * @param array<Category|array<string, mixed>> $categories
      * @throws ValidationException
      * @throws ApiException
@@ -66,8 +63,6 @@ class PoboClient
     }
 
     /**
-     * Import parameters in bulk (max 100 items per request)
-     *
      * @param array<Parameter|array<string, mixed>> $parameters
      * @throws ValidationException
      * @throws ApiException
@@ -86,8 +81,24 @@ class PoboClient
     }
 
     /**
-     * Get products with pagination
-     *
+     * @param array<Blog|array<string, mixed>> $blogs
+     * @throws ValidationException
+     * @throws ApiException
+     */
+    public function importBlogs(array $blogs): ImportResult
+    {
+        $this->validateBulkSize($blogs);
+
+        $payload = array_map(
+            fn($blog) => $blog instanceof Blog ? $blog->toArray() : $blog,
+            $blogs
+        );
+
+        $response = $this->request('POST', '/api/v2/rest/blogs', $payload);
+        return ImportResult::fromArray($response);
+    }
+
+    /**
      * @throws ApiException
      */
     public function getProducts(
@@ -102,8 +113,6 @@ class PoboClient
     }
 
     /**
-     * Get categories with pagination
-     *
      * @throws ApiException
      */
     public function getCategories(
@@ -118,8 +127,20 @@ class PoboClient
     }
 
     /**
-     * Iterate through all products (handles pagination automatically)
-     *
+     * @throws ApiException
+     */
+    public function getBlogs(
+        ?int $page = null,
+        ?int $perPage = null,
+        ?\DateTimeInterface $lastUpdateFrom = null,
+        ?bool $isEdited = null,
+    ): PaginatedResponse {
+        $query = $this->buildQueryParams($page, $perPage, $lastUpdateFrom, $isEdited);
+        $response = $this->request('GET', '/api/v2/rest/blogs' . $query);
+        return PaginatedResponse::fromArray($response, Blog::class);
+    }
+
+    /**
      * @return \Generator<Product>
      * @throws ApiException
      */
@@ -141,8 +162,6 @@ class PoboClient
     }
 
     /**
-     * Iterate through all categories (handles pagination automatically)
-     *
      * @return \Generator<Category>
      * @throws ApiException
      */
@@ -157,6 +176,27 @@ class PoboClient
 
             foreach ($response->data as $category) {
                 yield $category;
+            }
+
+            $page++;
+        } while ($response->hasMorePages());
+    }
+
+    /**
+     * @return \Generator<Blog>
+     * @throws ApiException
+     */
+    public function iterateBlogs(
+        ?\DateTimeInterface $lastUpdateFrom = null,
+        ?bool $isEdited = null,
+    ): \Generator {
+        $page = 1;
+
+        do {
+            $response = $this->getBlogs($page, self::MAX_BULK_ITEMS, $lastUpdateFrom, $isEdited);
+
+            foreach ($response->data as $blog) {
+                yield $blog;
             }
 
             $page++;
