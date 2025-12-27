@@ -1,5 +1,5 @@
 {
-    "name": "pobo/php-sdk",
+    "name": "pobo-builder/php-sdk",
     "description": "Official PHP SDK for Pobo API V2 - product content management and webhooks",
     "type": "library",
     "license": "MIT",
