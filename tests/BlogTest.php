@@ -15,22 +15,20 @@ final class BlogTest extends TestCase
     public function testCreateBlogWithAllFields(): void
     {
         $blog = new Blog(
-            id: 123,
-            guid: '550e8400-e29b-41d4-a716-446655440000',
-            category: 'news',
+            id: 'BLOG-123',
             isVisible: true,
             name: LocalizedString::create('Blog Title')
                 ->withTranslation(Language::CS, 'Název blogu'),
             url: LocalizedString::create('https://example.com/blog')
                 ->withTranslation(Language::CS, 'https://example.com/cs/blog'),
+            category: 'news',
             description: LocalizedString::create('<p>Description</p>'),
             seoTitle: LocalizedString::create('SEO Title'),
             seoDescription: LocalizedString::create('SEO Description'),
             images: ['https://example.com/image.jpg'],
         );
 
-        $this->assertSame(123, $blog->id);
-        $this->assertSame('550e8400-e29b-41d4-a716-446655440000', $blog->guid);
+        $this->assertSame('BLOG-123', $blog->id);
         $this->assertSame('news', $blog->category);
         $this->assertTrue($blog->isVisible);
         $this->assertSame('Blog Title', $blog->name->getDefault());
@@ -40,18 +38,18 @@ final class BlogTest extends TestCase
     public function testBlogToArray(): void
     {
         $blog = new Blog(
-            guid: '550e8400-e29b-41d4-a716-446655440000',
-            category: 'tips',
+            id: 'BLOG-001',
             isVisible: true,
             name: LocalizedString::create('Blog Title'),
             url: LocalizedString::create('https://example.com/blog'),
+            category: 'tips',
             description: LocalizedString::create('<p>Description</p>'),
             images: ['https://example.com/image.jpg'],
         );
 
         $array = $blog->toArray();
 
-        $this->assertSame('550e8400-e29b-41d4-a716-446655440000', $array['guid']);
+        $this->assertSame('BLOG-001', $array['id']);
         $this->assertSame('tips', $array['category']);
         $this->assertTrue($array['is_visible']);
         $this->assertArrayHasKey('name', $array);
@@ -63,6 +61,7 @@ final class BlogTest extends TestCase
     public function testBlogToArrayExcludesNullFields(): void
     {
         $blog = new Blog(
+            id: 'BLOG-001',
             isVisible: true,
             name: LocalizedString::create('Blog Title'),
             url: LocalizedString::create('https://example.com/blog'),
@@ -70,7 +69,9 @@ final class BlogTest extends TestCase
 
         $array = $blog->toArray();
 
-        $this->assertArrayNotHasKey('guid', $array);
+        $this->assertArrayHasKey('id', $array);
+        $this->assertArrayHasKey('name', $array);
+        $this->assertArrayHasKey('url', $array);
         $this->assertArrayNotHasKey('category', $array);
         $this->assertArrayNotHasKey('description', $array);
         $this->assertArrayNotHasKey('seo_title', $array);
@@ -81,8 +82,7 @@ final class BlogTest extends TestCase
     public function testBlogFromArray(): void
     {
         $data = [
-            'id' => 456,
-            'guid' => '550e8400-e29b-41d4-a716-446655440001',
+            'id' => 'BLOG-456',
             'category' => 'news',
             'is_visible' => true,
             'name' => ['default' => 'Blog Title', 'cs' => 'Název blogu'],
@@ -98,8 +98,7 @@ final class BlogTest extends TestCase
 
         $blog = Blog::fromArray($data);
 
-        $this->assertSame(456, $blog->id);
-        $this->assertSame('550e8400-e29b-41d4-a716-446655440001', $blog->guid);
+        $this->assertSame('BLOG-456', $blog->id);
         $this->assertSame('news', $blog->category);
         $this->assertTrue($blog->isVisible);
         $this->assertSame('Blog Title', $blog->name->getDefault());
@@ -112,7 +111,7 @@ final class BlogTest extends TestCase
     public function testBlogFromArrayWithContent(): void
     {
         $data = [
-            'id' => 789,
+            'id' => 'BLOG-789',
             'is_visible' => true,
             'name' => ['default' => 'Blog'],
             'url' => ['default' => 'https://example.com'],
@@ -138,7 +137,7 @@ final class BlogTest extends TestCase
     public function testBlogFromArrayWithMinimalData(): void
     {
         $data = [
-            'id' => 1,
+            'id' => 'BLOG-001',
             'is_visible' => false,
             'name' => ['default' => 'Minimal Blog'],
             'url' => ['default' => 'https://example.com/minimal'],
@@ -146,22 +145,14 @@ final class BlogTest extends TestCase
 
         $blog = Blog::fromArray($data);
 
-        $this->assertSame(1, $blog->id);
+        $this->assertSame('BLOG-001', $blog->id);
         $this->assertFalse($blog->isVisible);
-        $this->assertNull($blog->guid);
         $this->assertNull($blog->category);
         $this->assertNull($blog->description);
         $this->assertNull($blog->seoTitle);
         $this->assertNull($blog->seoDescription);
         $this->assertNull($blog->content);
         $this->assertSame([], $blog->images);
-    }
-
-    public function testBlogDefaultIsVisible(): void
-    {
-        $blog = new Blog();
-
-        $this->assertTrue($blog->isVisible);
     }
 
     public function testBlogImagesArray(): void
@@ -173,6 +164,7 @@ final class BlogTest extends TestCase
         ];
 
         $blog = new Blog(
+            id: 'BLOG-001',
             isVisible: true,
             name: LocalizedString::create('Blog'),
             url: LocalizedString::create('https://example.com'),
