@@ -169,8 +169,7 @@ use Pobo\Sdk\Enum\Language;
 
 $blogs = [
     new Blog(
-        guid: '550e8400-e29b-41d4-a716-446655440000',
-        category: 'news',
+        id: 'BLOG-001',
         isVisible: true,
         name: LocalizedString::create('New Product Launch')
             ->withTranslation(Language::CS, 'Uvedení nového produktu')
@@ -178,14 +177,14 @@ $blogs = [
         url: LocalizedString::create('https://example.com/blog/new-product')
             ->withTranslation(Language::CS, 'https://example.com/cs/blog/novy-produkt')
             ->withTranslation(Language::SK, 'https://example.com/sk/blog/novy-produkt'),
+        category: 'news',
         description: LocalizedString::create('<p>We are excited to announce...</p>')
             ->withTranslation(Language::CS, '<p>S radostí oznamujeme...</p>')
             ->withTranslation(Language::SK, '<p>S radosťou oznamujeme...</p>'),
         images: ['https://example.com/images/blog-1.jpg'],
     ),
     new Blog(
-        guid: '550e8400-e29b-41d4-a716-446655440001',
-        category: 'tips',
+        id: 'BLOG-002',
         isVisible: true,
         name: LocalizedString::create('How to Choose')
             ->withTranslation(Language::CS, 'Jak vybrat')
@@ -193,6 +192,7 @@ $blogs = [
         url: LocalizedString::create('https://example.com/blog/how-to-choose')
             ->withTranslation(Language::CS, 'https://example.com/cs/blog/jak-vybrat')
             ->withTranslation(Language::SK, 'https://example.com/sk/blog/ako-vybrat'),
+        category: 'tips',
     ),
 ];
 
@@ -247,7 +247,7 @@ foreach ($client->iterateCategories() as $category) {
 $response = $client->getBlogs();
 
 foreach ($response->data as $blog) {
-    echo sprintf("%d: %s\n", $blog->id, $blog->name->getDefault());
+    echo sprintf("%s: %s\n", $blog->id, $blog->name->getDefault());
 }
 
 // Iterate through all blogs
