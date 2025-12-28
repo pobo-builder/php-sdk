@@ -217,7 +217,7 @@ final class PoboClientTest extends TestCase
         $blogs = [];
         for ($i = 0; $i < 101; $i++) {
             $blogs[] = [
-                'guid' => sprintf('550e8400-e29b-41d4-a716-4466554400%02d', $i),
+                'id' => sprintf('BLOG-%03d', $i),
                 'is_visible' => true,
                 'name' => ['default' => sprintf('Blog %d', $i)],
                 'url' => ['default' => sprintf('https://example.com/blog/%d', $i)],
@@ -233,16 +233,16 @@ final class PoboClientTest extends TestCase
     public function testBlogDtoIsConvertedToArray(): void
     {
         $blog = new Blog(
-            guid: '550e8400-e29b-41d4-a716-446655440000',
-            category: 'news',
+            id: 'BLOG-001',
             isVisible: true,
             name: LocalizedString::create('Test Blog'),
             url: LocalizedString::create('https://example.com/blog'),
+            category: 'news',
         );
 
         $array = $blog->toArray();
 
-        $this->assertSame('550e8400-e29b-41d4-a716-446655440000', $array['guid']);
+        $this->assertSame('BLOG-001', $array['id']);
         $this->assertSame('news', $array['category']);
         $this->assertTrue($array['is_visible']);
     }
