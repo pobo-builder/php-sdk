@@ -13,6 +13,7 @@ final class WebhookEventTest extends TestCase
     {
         $this->assertSame('Products.update', WebhookEvent::PRODUCTS_UPDATE->value);
         $this->assertSame('Categories.update', WebhookEvent::CATEGORIES_UPDATE->value);
+        $this->assertSame('Blogs.update', WebhookEvent::BLOGS_UPDATE->value);
     }
 
     public function testValues(): void
@@ -21,13 +22,15 @@ final class WebhookEventTest extends TestCase
 
         $this->assertContains('Products.update', $values);
         $this->assertContains('Categories.update', $values);
-        $this->assertCount(2, $values);
+        $this->assertContains('Blogs.update', $values);
+        $this->assertCount(3, $values);
     }
 
     public function testFromStringReturnsCorrectEnum(): void
     {
         $this->assertSame(WebhookEvent::PRODUCTS_UPDATE, WebhookEvent::fromString('Products.update'));
         $this->assertSame(WebhookEvent::CATEGORIES_UPDATE, WebhookEvent::fromString('Categories.update'));
+        $this->assertSame(WebhookEvent::BLOGS_UPDATE, WebhookEvent::fromString('Blogs.update'));
     }
 
     public function testFromStringReturnsNullForUnknown(): void
@@ -36,5 +39,7 @@ final class WebhookEventTest extends TestCase
         $this->assertNull(WebhookEvent::fromString(''));
         $this->assertNull(WebhookEvent::fromString('products.update'));
         $this->assertNull(WebhookEvent::fromString('PRODUCTS.UPDATE'));
+        $this->assertNull(WebhookEvent::fromString('blogs.update'));
+        $this->assertNull(WebhookEvent::fromString('BLOGS.UPDATE'));
     }
 }
