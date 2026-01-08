@@ -8,6 +8,7 @@ enum WebhookEvent: string
 {
     case PRODUCTS_UPDATE = 'Products.update';
     case CATEGORIES_UPDATE = 'Categories.update';
+    case BLOGS_UPDATE = 'Blogs.update';
 
     /**
      * @return array<string>
@@ -22,6 +23,7 @@ enum WebhookEvent: string
         return match ($value) {
             'Products.update' => self::PRODUCTS_UPDATE,
             'Categories.update' => self::CATEGORIES_UPDATE,
+            'Blogs.update' => self::BLOGS_UPDATE,
             default => null,
         };
     }

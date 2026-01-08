@@ -312,6 +312,7 @@ try {
     match ($payload->event) {
         WebhookEvent::PRODUCTS_UPDATE => syncProducts($client),
         WebhookEvent::CATEGORIES_UPDATE => syncCategories($client),
+        WebhookEvent::BLOGS_UPDATE => syncBlogs($client),
     };
 
     http_response_code(200);
