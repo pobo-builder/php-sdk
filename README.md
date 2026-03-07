@@ -200,6 +200,38 @@ $result = $client->importBlogs($blogs);
 echo sprintf('Imported: %d, Updated: %d', $result->imported, $result->updated);
 ```
 
+## Delete
+
+### Delete Products
+
+```php
+$result = $client->deleteProducts(['PROD-001', 'PROD-002', 'PROD-003']);
+
+echo sprintf('Deleted: %d, Skipped: %d', $result->deleted, $result->skipped);
+
+if ($result->hasErrors() === true) {
+    foreach ($result->errors as $error) {
+        echo sprintf('ID %s: %s', $error['id'], implode(', ', $error['errors']));
+    }
+}
+```
+
+### Delete Categories
+
+```php
+$result = $client->deleteCategories(['CAT-001', 'CAT-002']);
+echo sprintf('Deleted: %d', $result->deleted);
+```
+
+### Delete Blogs
+
+```php
+$result = $client->deleteBlogs(['BLOG-001', 'BLOG-002']);
+echo sprintf('Deleted: %d', $result->deleted);
+```
+
+> **Note:** Delete performs a soft-delete (sets `is_delete = true`). Related data (meta, widgets, images) remains unchanged. Maximum 100 IDs per request.
+
 ## Export
 
 ### Export Products
@@ -400,6 +432,9 @@ $name->toArray();            // ['default' => '...', 'cs' => '...', ...]
 | `importCategories(array $categories)`                                                  | Bulk import categories (max 100) |
 | `importParameters(array $parameters)`                                                  | Bulk import parameters (max 100) |
 | `importBlogs(array $blogs)`                                                            | Bulk import blogs (max 100)      |
+| `deleteProducts(array $ids)`                                                           | Bulk delete products (max 100)   |
+| `deleteCategories(array $ids)`                                                         | Bulk delete categories (max 100) |
+| `deleteBlogs(array $ids)`                                                              | Bulk delete blogs (max 100)      |
 | `getProducts(?int $page, ?int $perPage, ?DateTime $lastUpdateFrom, ?bool $isEdited)`   | Get products page                |
 | `getCategories(?int $page, ?int $perPage, ?DateTime $lastUpdateFrom, ?bool $isEdited)` | Get categories page              |
 | `getBlogs(?int $page, ?int $perPage, ?DateTime $lastUpdateFrom, ?bool $isEdited)`      | Get blogs page                   |
@@ -412,6 +447,7 @@ $name->toArray();            // ['default' => '...', 'cs' => '...', ...]
 | Limit                        | Value        |
 |------------------------------|--------------|
 | Max items per import request | 100          |
+| Max items per delete request | 100          |
 | Max items per export page    | 100          |
 | Product/Category ID length   | 255 chars    |
 | Name length                  | 250 chars    |

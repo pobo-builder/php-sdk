@@ -20,7 +20,7 @@ class ValidationException extends PoboException
     {
         return new self(
             sprintf('Too many items: %d provided, maximum is %d', $count, $max),
-            ['bulk' => [sprintf('Maximum %d items allowed for bulk import', $max)]]
+            ['bulk' => [sprintf('Maximum %d items allowed per request', $max)]]
         );
     }
 
