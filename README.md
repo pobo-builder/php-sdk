@@ -230,7 +230,7 @@ $result = $client->deleteBlogs(['BLOG-001', 'BLOG-002']);
 echo sprintf('Deleted: %d', $result->deleted);
 ```
 
-> **Note:** Delete performs a soft-delete (sets `is_delete = true`). Related data (meta, widgets, images) remains unchanged. Maximum 100 IDs per request.
+> **Note:** Delete performs a soft-delete.
 
 ## Export
 
