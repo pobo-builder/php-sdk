@@ -7,6 +7,7 @@ namespace Pobo\Sdk\Tests;
 use PHPUnit\Framework\TestCase;
 use Pobo\Sdk\DTO\Blog;
 use Pobo\Sdk\DTO\Category;
+use Pobo\Sdk\DTO\DeleteResult;
 use Pobo\Sdk\DTO\LocalizedString;
 use Pobo\Sdk\DTO\Parameter;
 use Pobo\Sdk\DTO\ParameterValue;
@@ -245,5 +246,85 @@ final class PoboClientTest extends TestCase
         $this->assertSame('BLOG-001', $array['id']);
         $this->assertSame('news', $array['category']);
         $this->assertTrue($array['is_visible']);
+    }
+
+    public function testDeleteProductsThrowsExceptionForEmptyArray(): void
+    {
+        $this->expectException(ValidationException::class);
+        $this->expectExceptionMessage('Payload cannot be empty');
+
+        $this->client->deleteProducts([]);
+    }
+
+    public function testDeleteProductsThrowsExceptionForTooManyItems(): void
+    {
+        $ids = [];
+        for ($i = 0; $i < 101; $i++) {
+            $ids[] = sprintf('PROD-%03d', $i);
+        }
+
+        $this->expectException(ValidationException::class);
+        $this->expectExceptionMessage('Too many items: 101 provided, maximum is 100');
+
+        $this->client->deleteProducts($ids);
+    }
+
+    public function testDeleteCategoriesThrowsExceptionForEmptyArray(): void
+    {
+        $this->expectException(ValidationException::class);
+        $this->expectExceptionMessage('Payload cannot be empty');
+
+        $this->client->deleteCategories([]);
+    }
+
+    public function testDeleteCategoriesThrowsExceptionForTooManyItems(): void
+    {
+        $ids = [];
+        for ($i = 0; $i < 101; $i++) {
+            $ids[] = sprintf('CAT-%03d', $i);
+        }
+
+        $this->expectException(ValidationException::class);
+        $this->expectExceptionMessage('Too many items: 101 provided, maximum is 100');
+
+        $this->client->deleteCategories($ids);
+    }
+
+    public function testDeleteBlogsThrowsExceptionForEmptyArray(): void
+    {
+        $this->expectException(ValidationException::class);
+        $this->expectExceptionMessage('Payload cannot be empty');
+
+        $this->client->deleteBlogs([]);
+    }
+
+    public function testDeleteBlogsThrowsExceptionForTooManyItems(): void
+    {
+        $ids = [];
+        for ($i = 0; $i < 101; $i++) {
+            $ids[] = sprintf('BLOG-%03d', $i);
+        }
+
+        $this->expectException(ValidationException::class);
+        $this->expectExceptionMessage('Too many items: 101 provided, maximum is 100');
+
+        $this->client->deleteBlogs($ids);
+    }
+
+    public function testDeleteResultFromArray(): void
+    {
+        $result = DeleteResult::fromArray([
+            'success' => true,
+            'deleted' => 2,
+            'skipped' => 1,
+            'errors' => [
+                ['index' => 2, 'id' => 'PROD-999', 'errors' => ['Product not found']],
+            ],
+        ]);
+
+        $this->assertTrue($result->success);
+        $this->assertSame(2, $result->deleted);
+        $this->assertSame(1, $result->skipped);
+        $this->assertTrue($result->hasErrors());
     }
 }

@@ -6,6 +6,7 @@ namespace Pobo\Sdk;
 
 use Pobo\Sdk\DTO\Blog;
 use Pobo\Sdk\DTO\Category;
+use Pobo\Sdk\DTO\DeleteResult;
 use Pobo\Sdk\DTO\ImportResult;
 use Pobo\Sdk\DTO\PaginatedResponse;
 use Pobo\Sdk\DTO\Parameter;
@@ -141,6 +142,51 @@ class PoboClient
     }
 
     /**
+     * @param array<string> $ids
+     * @throws ValidationException
+     * @throws ApiException
+     */
+    public function deleteProducts(array $ids): DeleteResult
+    {
+        $this->validateBulkSize($ids);
+
+        $payload = array_map(fn(string $id) => ['id' => $id], $ids);
+
+        $response = $this->request('DELETE', '/api/v2/rest/products', $payload);
+        return DeleteResult::fromArray($response);
+    }
+
+    /**
+     * @param array<string> $ids
+     * @throws ValidationException
+     * @throws ApiException
+     */
+    public function deleteCategories(array $ids): DeleteResult
+    {
+        $this->validateBulkSize($ids);
+
+        $payload = array_map(fn(string $id) => ['id' => $id], $ids);
+
+        $response = $this->request('DELETE', '/api/v2/rest/categories', $payload);
+        return DeleteResult::fromArray($response);
+    }
+
+    /**
+     * @param array<string> $ids
+     * @throws ValidationException
+     * @throws ApiException
+     */
+    public function deleteBlogs(array $ids): DeleteResult
+    {
+        $this->validateBulkSize($ids);
+
+        $payload = array_map(fn(string $id) => ['id' => $id], $ids);
+
+        $response = $this->request('DELETE', '/api/v2/rest/blogs', $payload);
+        return DeleteResult::fromArray($response);
+    }
+
+    /**
      * @return \Generator<Product>
      * @throws ApiException
      */
@@ -272,6 +318,11 @@ class PoboClient
 
         if ($method === 'POST') {
             curl_setopt($ch, CURLOPT_POST, true);
+            if ($data !== null) {
+                curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($data));
+            }
+        } elseif ($method === 'DELETE') {
+            curl_setopt($ch, CURLOPT_CUSTOMREQUEST, 'DELETE');
             if ($data !== null) {
                 curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($data));
             }
