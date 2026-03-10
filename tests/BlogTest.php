@@ -134,6 +134,59 @@ final class BlogTest extends TestCase
         $this->assertSame('<div>Czech Marketplace</div>', $blog->content->getMarketplace(Language::CS));
     }
 
+    public function testBlogFromArrayWithNestedContent(): void
+    {
+        $nested = [
+            [['id' => 3, 'class' => 'text', 'tag' => 'p', 'children' => []]],
+        ];
+
+        $data = [
+            'id' => 'BLOG-NESTED',
+            'is_visible' => true,
+            'name' => ['default' => 'Blog with nested'],
+            'url' => ['default' => 'https://example.com/blog'],
+            'content' => [
+                'html' => [
+                    'default' => '<div class="pobo-content">Default HTML</div>',
+                ],
+                'marketplace' => [
+                    'default' => '<div>Default Marketplace</div>',
+                ],
+                'nested' => $nested,
+            ],
+        ];
+
+        $blog = Blog::fromArray($data);
+
+        $this->assertInstanceOf(Content::class, $blog->content);
+        $this->assertSame($nested, $blog->content->getNested());
+        $this->assertCount(1, $blog->content->nested);
+        $this->assertSame('<div class="pobo-content">Default HTML</div>', $blog->content->getHtmlDefault());
+        $this->assertSame('<div>Default Marketplace</div>', $blog->content->getMarketplaceDefault());
+    }
+
+    public function testBlogFromArrayWithContentOnlyHtml(): void
+    {
+        $data = [
+            'id' => 'BLOG-HTML',
+            'is_visible' => true,
+            'name' => ['default' => 'Blog HTML only'],
+            'url' => ['default' => 'https://example.com/blog'],
+            'content' => [
+                'html' => [
+                    'default' => '<div>HTML</div>',
+                ],
+            ],
+        ];
+
+        $blog = Blog::fromArray($data);
+
+        $this->assertInstanceOf(Content::class, $blog->content);
+        $this->assertSame('<div>HTML</div>', $blog->content->getHtmlDefault());
+        $this->assertSame([], $blog->content->marketplace);
+        $this->assertSame([], $blog->content->nested);
+    }
+
     public function testBlogFromArrayWithMinimalData(): void
     {
         $data = [

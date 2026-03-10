@@ -54,6 +54,61 @@ final class ProductTest extends TestCase
         $this->assertSame('<div>Czech Marketplace</div>', $product->content->getMarketplace(Language::CS));
     }
 
+    public function testProductFromArrayWithNestedContent(): void
+    {
+        $nested = [
+            [['id' => 2, 'class' => 'empty', 'tag' => 'div', 'children' => []]],
+            [['id' => 5, 'class' => 'text', 'tag' => 'p', 'children' => []]],
+        ];
+
+        $data = [
+            'id' => 'PROD-003',
+            'is_visible' => true,
+            'name' => ['default' => 'Product with nested'],
+            'url' => ['default' => 'https://example.com/product'],
+            'content' => [
+                'html' => [
+                    'default' => '<div class="pobo-content">Default HTML</div>',
+                    'cs' => '<div class="pobo-content">Czech HTML</div>',
+                ],
+                'marketplace' => [
+                    'default' => '<div>Default Marketplace</div>',
+                ],
+                'nested' => $nested,
+            ],
+        ];
+
+        $product = Product::fromArray($data);
+
+        $this->assertInstanceOf(Content::class, $product->content);
+        $this->assertSame($nested, $product->content->getNested());
+        $this->assertCount(2, $product->content->nested);
+        $this->assertSame('<div class="pobo-content">Czech HTML</div>', $product->content->getHtml(Language::CS));
+        $this->assertSame('<div>Default Marketplace</div>', $product->content->getMarketplaceDefault());
+    }
+
+    public function testProductFromArrayWithContentOnlyHtml(): void
+    {
+        $data = [
+            'id' => 'PROD-004',
+            'is_visible' => true,
+            'name' => ['default' => 'Product HTML only'],
+            'url' => ['default' => 'https://example.com/product'],
+            'content' => [
+                'html' => [
+                    'default' => '<div>HTML</div>',
+                ],
+            ],
+        ];
+
+        $product = Product::fromArray($data);
+
+        $this->assertInstanceOf(Content::class, $product->content);
+        $this->assertSame('<div>HTML</div>', $product->content->getHtmlDefault());
+        $this->assertSame([], $product->content->marketplace);
+        $this->assertSame([], $product->content->nested);
+    }
+
     public function testProductFromArrayWithoutContent(): void
     {
         $data = [

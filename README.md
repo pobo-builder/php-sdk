@@ -256,6 +256,11 @@ $response = $client->getProducts(lastUpdateFrom: $since);
 
 // Filter only edited products
 $response = $client->getProducts(isEdited: true);
+
+// Include optional content (marketplace HTML, raw widget JSON)
+use Pobo\Sdk\Enum\IncludeContent;
+
+$response = $client->getProducts(include: [IncludeContent::MARKETPLACE, IncludeContent::NESTED]);
 ```
 
 ### Export Categories
@@ -288,23 +293,33 @@ foreach ($client->iterateBlogs() as $blog) {
 }
 ```
 
-## Content (HTML/Marketplace)
+## Content (HTML/Marketplace/Nested)
 
-Products, categories, and blogs include a `content` field with generated HTML content for web and marketplace:
+By default, only `content.html` is returned. Use the `include` parameter to request additional content:
+
+| Value         | Description                                  |
+|---------------|----------------------------------------------|
+| `marketplace` | HTML content for marketplace (no custom CSS) |
+| `nested`      | Raw widget JSON from widget tables           |
 
 ```php
+use Pobo\Sdk\Enum\IncludeContent;
 use Pobo\Sdk\Enum\Language;
 
-foreach ($client->iterateProducts() as $product) {
+// Include marketplace and nested content
+foreach ($client->iterateProducts(include: [IncludeContent::MARKETPLACE, IncludeContent::NESTED]) as $product) {
     if ($product->content !== null) {
-        // Get HTML content for web
+        // Get HTML content for web (always included)
         $htmlCs = $product->content->getHtml(Language::CS);
         $htmlSk = $product->content->getHtml(Language::SK);
         $htmlEn = $product->content->getHtml(Language::EN);
 
-        // Get content for marketplace
+        // Get content for marketplace (requires include: ['marketplace'])
         $marketplaceCs = $product->content->getMarketplace(Language::CS);
         $marketplaceSk = $product->content->getMarketplace(Language::SK);
+
+        // Get raw widget JSON (requires include: ['nested'])
+        $nested = $product->content->getNested();
 
         // Get default content
         $htmlDefault = $product->content->getHtmlDefault();
@@ -313,16 +328,18 @@ foreach ($client->iterateProducts() as $product) {
 }
 
 // Same for categories
-foreach ($client->iterateCategories() as $category) {
+foreach ($client->iterateCategories(include: [IncludeContent::NESTED]) as $category) {
     if ($category->content !== null) {
         echo $category->content->getHtml(Language::CS);
+        $nested = $category->content->getNested();
     }
 }
 
 // Same for blogs
-foreach ($client->iterateBlogs() as $blog) {
+foreach ($client->iterateBlogs(include: [IncludeContent::MARKETPLACE]) as $blog) {
     if ($blog->content !== null) {
         echo $blog->content->getHtml(Language::CS);
+        echo $blog->content->getMarketplace(Language::CS);
     }
 }
 ```
@@ -426,21 +443,21 @@ $name->toArray();            // ['default' => '...', 'cs' => '...', ...]
 
 ## API Methods
 
-| Method                                                                                 | Description                      |
-|----------------------------------------------------------------------------------------|----------------------------------|
-| `importProducts(array $products)`                                                      | Bulk import products (max 100)   |
-| `importCategories(array $categories)`                                                  | Bulk import categories (max 100) |
-| `importParameters(array $parameters)`                                                  | Bulk import parameters (max 100) |
-| `importBlogs(array $blogs)`                                                            | Bulk import blogs (max 100)      |
-| `deleteProducts(array $ids)`                                                           | Bulk delete products (max 100)   |
-| `deleteCategories(array $ids)`                                                         | Bulk delete categories (max 100) |
-| `deleteBlogs(array $ids)`                                                              | Bulk delete blogs (max 100)      |
-| `getProducts(?int $page, ?int $perPage, ?DateTime $lastUpdateFrom, ?bool $isEdited)`   | Get products page                |
-| `getCategories(?int $page, ?int $perPage, ?DateTime $lastUpdateFrom, ?bool $isEdited)` | Get categories page              |
-| `getBlogs(?int $page, ?int $perPage, ?DateTime $lastUpdateFrom, ?bool $isEdited)`      | Get blogs page                   |
-| `iterateProducts(?DateTime $lastUpdateFrom, ?bool $isEdited)`                          | Iterate all products             |
-| `iterateCategories(?DateTime $lastUpdateFrom, ?bool $isEdited)`                        | Iterate all categories           |
-| `iterateBlogs(?DateTime $lastUpdateFrom, ?bool $isEdited)`                             | Iterate all blogs                |
+| Method                                                                                                  | Description                      |
+|---------------------------------------------------------------------------------------------------------|----------------------------------|
+| `importProducts(array $products)`                                                                       | Bulk import products (max 100)   |
+| `importCategories(array $categories)`                                                                   | Bulk import categories (max 100) |
+| `importParameters(array $parameters)`                                                                   | Bulk import parameters (max 100) |
+| `importBlogs(array $blogs)`                                                                             | Bulk import blogs (max 100)      |
+| `deleteProducts(array $ids)`                                                                            | Bulk delete products (max 100)   |
+| `deleteCategories(array $ids)`                                                                          | Bulk delete categories (max 100) |
+| `deleteBlogs(array $ids)`                                                                               | Bulk delete blogs (max 100)      |
+| `getProducts(?int $page, ?int $perPage, ?DateTime $lastUpdateFrom, ?bool $isEdited, ?array $include)`   | Get products page                |
+| `getCategories(?int $page, ?int $perPage, ?DateTime $lastUpdateFrom, ?bool $isEdited, ?array $include)` | Get categories page              |
+| `getBlogs(?int $page, ?int $perPage, ?DateTime $lastUpdateFrom, ?bool $isEdited, ?array $include)`      | Get blogs page                   |
+| `iterateProducts(?DateTime $lastUpdateFrom, ?bool $isEdited, ?array $include)`                          | Iterate all products             |
+| `iterateCategories(?DateTime $lastUpdateFrom, ?bool $isEdited, ?array $include)`                        | Iterate all categories           |
+| `iterateBlogs(?DateTime $lastUpdateFrom, ?bool $isEdited, ?array $include)`                             | Iterate all blogs                |
 
 ## Limits
 

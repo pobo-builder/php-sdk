@@ -11,6 +11,7 @@ use Pobo\Sdk\DTO\ImportResult;
 use Pobo\Sdk\DTO\PaginatedResponse;
 use Pobo\Sdk\DTO\Parameter;
 use Pobo\Sdk\DTO\Product;
+use Pobo\Sdk\Enum\IncludeContent;
 use Pobo\Sdk\Exception\ApiException;
 use Pobo\Sdk\Exception\ValidationException;
 
@@ -100,6 +101,7 @@ class PoboClient
     }
 
     /**
+     * @param array<IncludeContent|string>|null $include Optional content to include: IncludeContent::MARKETPLACE, IncludeContent::NESTED
      * @throws ApiException
      */
     public function getProducts(
@@ -107,13 +109,15 @@ class PoboClient
         ?int $perPage = null,
         ?\DateTimeInterface $lastUpdateFrom = null,
         ?bool $isEdited = null,
+        ?array $include = null,
     ): PaginatedResponse {
-        $query = $this->buildQueryParams($page, $perPage, $lastUpdateFrom, $isEdited);
+        $query = $this->buildQueryParams($page, $perPage, $lastUpdateFrom, $isEdited, $include);
         $response = $this->request('GET', '/api/v2/rest/products' . $query);
         return PaginatedResponse::fromArray($response, Product::class);
     }
 
     /**
+     * @param array<IncludeContent|string>|null $include Optional content to include: IncludeContent::MARKETPLACE, IncludeContent::NESTED
      * @throws ApiException
      */
     public function getCategories(
@@ -121,13 +125,15 @@ class PoboClient
         ?int $perPage = null,
         ?\DateTimeInterface $lastUpdateFrom = null,
         ?bool $isEdited = null,
+        ?array $include = null,
     ): PaginatedResponse {
-        $query = $this->buildQueryParams($page, $perPage, $lastUpdateFrom, $isEdited);
+        $query = $this->buildQueryParams($page, $perPage, $lastUpdateFrom, $isEdited, $include);
         $response = $this->request('GET', '/api/v2/rest/categories' . $query);
         return PaginatedResponse::fromArray($response, Category::class);
     }
 
     /**
+     * @param array<IncludeContent|string>|null $include Optional content to include: IncludeContent::MARKETPLACE, IncludeContent::NESTED
      * @throws ApiException
      */
     public function getBlogs(
@@ -135,8 +141,9 @@ class PoboClient
         ?int $perPage = null,
         ?\DateTimeInterface $lastUpdateFrom = null,
         ?bool $isEdited = null,
+        ?array $include = null,
     ): PaginatedResponse {
-        $query = $this->buildQueryParams($page, $perPage, $lastUpdateFrom, $isEdited);
+        $query = $this->buildQueryParams($page, $perPage, $lastUpdateFrom, $isEdited, $include);
         $response = $this->request('GET', '/api/v2/rest/blogs' . $query);
         return PaginatedResponse::fromArray($response, Blog::class);
     }
@@ -187,17 +194,19 @@ class PoboClient
     }
 
     /**
+     * @param array<IncludeContent|string>|null $include Optional content to include: IncludeContent::MARKETPLACE, IncludeContent::NESTED
      * @return \Generator<Product>
      * @throws ApiException
      */
     public function iterateProducts(
         ?\DateTimeInterface $lastUpdateFrom = null,
         ?bool $isEdited = null,
+        ?array $include = null,
     ): \Generator {
         $page = 1;
 
         do {
-            $response = $this->getProducts($page, self::MAX_BULK_ITEMS, $lastUpdateFrom, $isEdited);
+            $response = $this->getProducts($page, self::MAX_BULK_ITEMS, $lastUpdateFrom, $isEdited, $include);
 
             foreach ($response->data as $product) {
                 yield $product;
@@ -208,17 +217,19 @@ class PoboClient
     }
 
     /**
+     * @param array<IncludeContent|string>|null $include Optional content to include: IncludeContent::MARKETPLACE, IncludeContent::NESTED
      * @return \Generator<Category>
      * @throws ApiException
      */
     public function iterateCategories(
         ?\DateTimeInterface $lastUpdateFrom = null,
         ?bool $isEdited = null,
+        ?array $include = null,
     ): \Generator {
         $page = 1;
 
         do {
-            $response = $this->getCategories($page, self::MAX_BULK_ITEMS, $lastUpdateFrom, $isEdited);
+            $response = $this->getCategories($page, self::MAX_BULK_ITEMS, $lastUpdateFrom, $isEdited, $include);
 
             foreach ($response->data as $category) {
                 yield $category;
@@ -229,17 +240,19 @@ class PoboClient
     }
 
     /**
+     * @param array<IncludeContent|string>|null $include Optional content to include: IncludeContent::MARKETPLACE, IncludeContent::NESTED
      * @return \Generator<Blog>
      * @throws ApiException
      */
     public function iterateBlogs(
         ?\DateTimeInterface $lastUpdateFrom = null,
         ?bool $isEdited = null,
+        ?array $include = null,
     ): \Generator {
         $page = 1;
 
         do {
-            $response = $this->getBlogs($page, self::MAX_BULK_ITEMS, $lastUpdateFrom, $isEdited);
+            $response = $this->getBlogs($page, self::MAX_BULK_ITEMS, $lastUpdateFrom, $isEdited, $include);
 
             foreach ($response->data as $blog) {
                 yield $blog;
@@ -264,11 +277,15 @@ class PoboClient
         }
     }
 
+    /**
+     * @param array<IncludeContent|string>|null $include
+     */
     private function buildQueryParams(
         ?int $page,
         ?int $perPage,
         ?\DateTimeInterface $lastUpdateFrom,
         ?bool $isEdited,
+        ?array $include = null,
     ): string {
         $params = [];
 
@@ -286,6 +303,14 @@ class PoboClient
 
         if ($isEdited !== null) {
             $params['is_edited'] = $isEdited === true ? 'true' : 'false';
+        }
+
+        if ($include !== null && $include !== []) {
+            $values = array_map(
+                fn(IncludeContent|string $item) => $item instanceof IncludeContent ? $item->value : $item,
+                $include,
+            );
+            $params['include'] = implode(',', $values);
         }
 
         return $params === [] ? '' : sprintf('?%s', http_build_query($params));

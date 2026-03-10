@@ -52,6 +52,55 @@ final class CategoryTest extends TestCase
         $this->assertFalse($category->isLoaded);
     }
 
+    public function testCategoryFromArrayWithNestedContent(): void
+    {
+        $nested = [
+            [['id' => 1, 'class' => 'empty', 'tag' => 'div', 'children' => []]],
+        ];
+
+        $data = [
+            'id' => 'CAT-003',
+            'is_visible' => true,
+            'name' => ['default' => 'Category with nested'],
+            'url' => ['default' => 'https://example.com/category'],
+            'content' => [
+                'html' => [
+                    'default' => '<div class="pobo-content">Default HTML</div>',
+                ],
+                'nested' => $nested,
+            ],
+        ];
+
+        $category = Category::fromArray($data);
+
+        $this->assertInstanceOf(Content::class, $category->content);
+        $this->assertSame($nested, $category->content->getNested());
+        $this->assertCount(1, $category->content->nested);
+        $this->assertSame([], $category->content->marketplace);
+    }
+
+    public function testCategoryFromArrayWithContentOnlyHtml(): void
+    {
+        $data = [
+            'id' => 'CAT-004',
+            'is_visible' => true,
+            'name' => ['default' => 'Category HTML only'],
+            'url' => ['default' => 'https://example.com/category'],
+            'content' => [
+                'html' => [
+                    'default' => '<div>HTML</div>',
+                ],
+            ],
+        ];
+
+        $category = Category::fromArray($data);
+
+        $this->assertInstanceOf(Content::class, $category->content);
+        $this->assertSame('<div>HTML</div>', $category->content->getHtmlDefault());
+        $this->assertSame([], $category->content->marketplace);
+        $this->assertSame([], $category->content->nested);
+    }
+
     public function testCategoryFromArrayWithoutContent(): void
     {
         $data = [
