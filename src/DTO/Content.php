@@ -11,10 +11,12 @@ final class Content
     /**
      * @param array<string, string> $html
      * @param array<string, string> $marketplace
+     * @param array<int, array<mixed>> $nested
      */
     public function __construct(
         public readonly array $html = [],
         public readonly array $marketplace = [],
+        public readonly array $nested = [],
     ) {
     }
 
@@ -39,14 +41,28 @@ final class Content
     }
 
     /**
-     * @return array<string, array<string, string>>
+     * @return array<int, array<mixed>>
+     */
+    public function getNested(): array
+    {
+        return $this->nested;
+    }
+
+    /**
+     * @return array<string, mixed>
      */
     public function toArray(): array
     {
-        return [
+        $result = [
             'html' => $this->html,
             'marketplace' => $this->marketplace,
         ];
+
+        if ($this->nested !== []) {
+            $result['nested'] = $this->nested;
+        }
+
+        return $result;
     }
 
     /**
@@ -57,6 +73,7 @@ final class Content
         return new self(
             html: $data['html'] ?? [],
             marketplace: $data['marketplace'] ?? [],
+            nested: $data['nested'] ?? [],
         );
     }
 }

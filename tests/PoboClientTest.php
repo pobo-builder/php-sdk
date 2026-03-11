@@ -12,6 +12,7 @@ use Pobo\Sdk\DTO\LocalizedString;
 use Pobo\Sdk\DTO\Parameter;
 use Pobo\Sdk\DTO\ParameterValue;
 use Pobo\Sdk\DTO\Product;
+use Pobo\Sdk\Enum\IncludeContent;
 use Pobo\Sdk\Exception\ValidationException;
 use Pobo\Sdk\PoboClient;
 
@@ -326,5 +327,120 @@ final class PoboClientTest extends TestCase
         $this->assertSame(2, $result->deleted);
         $this->assertSame(1, $result->skipped);
         $this->assertTrue($result->hasErrors());
+    }
+
+    public function testBuildQueryParamsWithIncludeEnum(): void
+    {
+        $method = new \ReflectionMethod(PoboClient::class, 'buildQueryParams');
+
+        $query = $method->invoke(
+            $this->client,
+            null,
+            null,
+            null,
+            null,
+            [IncludeContent::MARKETPLACE, IncludeContent::NESTED],
+        );
+
+        $this->assertSame('?include=marketplace%2Cnested', $query);
+    }
+
+    public function testBuildQueryParamsWithIncludeString(): void
+    {
+        $method = new \ReflectionMethod(PoboClient::class, 'buildQueryParams');
+
+        $query = $method->invoke(
+            $this->client,
+            null,
+            null,
+            null,
+            null,
+            ['marketplace', 'nested'],
+        );
+
+        $this->assertSame('?include=marketplace%2Cnested', $query);
+    }
+
+    public function testBuildQueryParamsWithIncludeSingleValue(): void
+    {
+        $method = new \ReflectionMethod(PoboClient::class, 'buildQueryParams');
+
+        $query = $method->invoke(
+            $this->client,
+            null,
+            null,
+            null,
+            null,
+            [IncludeContent::NESTED],
+        );
+
+        $this->assertSame('?include=nested', $query);
+    }
+
+    public function testBuildQueryParamsWithIncludeNullReturnsEmpty(): void
+    {
+        $method = new \ReflectionMethod(PoboClient::class, 'buildQueryParams');
+
+        $query = $method->invoke(
+            $this->client,
+            null,
+            null,
+            null,
+            null,
+            null,
+        );
+
+        $this->assertSame('', $query);
+    }
+
+    public function testBuildQueryParamsWithIncludeEmptyArrayReturnsEmpty(): void
+    {
+        $method = new \ReflectionMethod(PoboClient::class, 'buildQueryParams');
+
+        $query = $method->invoke(
+            $this->client,
+            null,
+            null,
+            null,
+            null,
+            [],
+        );
+
+        $this->assertSame('', $query);
+    }
+
+    public function testBuildQueryParamsWithIncludeMixedWithOtherParam(): void
+    {
+        $method = new \ReflectionMethod(PoboClient::class, 'buildQueryParams');
+
+        $query = $method->invoke(
+            $this->client,
+            1,
+            50,
+            null,
+            true,
+            [IncludeContent::MARKETPLACE],
+        );
+
+        $this->assertStringContainsString('page=1', $query);
+        $this->assertStringContainsString('per_page=50', $query);
+        $this->assertStringContainsString('is_edited=true', $query);
+        $this->assertStringContainsString('include=marketplace', $query);
+    }
+
+    public function testBuildQueryParamsWithMixedEnumAndString(): void
+    {
+        $method = new \ReflectionMethod(PoboClient::class, 'buildQueryParams');
+
+        $query = $method->invoke(
+            $this->client,
+            null,
+            null,
+            null,
+            null,
+            [IncludeContent::MARKETPLACE, 'nested'],
+        );
+
+        $this->assertSame('?include=marketplace%2Cnested', $query);
     }
 }

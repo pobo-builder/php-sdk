@@ -105,6 +105,33 @@ final class ContentTest extends TestCase
         $this->assertSame('<div>Czech Marketplace</div>', $content->getMarketplaceDefault());
     }
 
+    public function testCreateContentWithNested(): void
+    {
+        $nested = [
+            [['id' => 2, 'class' => 'empty', 'tag' => 'div', 'children' => []]],
+            [['id' => 5, 'class' => 'text', 'tag' => 'p', 'children' => []]],
+        ];
+
+        $content = Content::fromArray([
+            'html' => ['cs' => '<div>Czech</div>'],
+            'marketplace' => [],
+            'nested' => $nested,
+        ]);
+
+        $this->assertSame($nested, $content->getNested());
+        $this->assertCount(2, $content->nested);
+    }
+
+    public function testNestedIsEmptyByDefault(): void
+    {
+        $content = Content::fromArray([
+            'html' => ['cs' => '<div>Czech</div>'],
+        ]);
+
+        $this->assertSame([], $content->getNested());
+        $this->assertSame([], $content->nested);
+    }
+
     public function testToArray(): void
     {
         $content = new Content(
@@ -116,9 +143,26 @@ final class ContentTest extends TestCase
 
         $this->assertArrayHasKey('html', $array);
         $this->assertArrayHasKey('marketplace', $array);
+        $this->assertArrayNotHasKey('nested', $array);
         $this->assertSame('<div>Czech</div>', $array['html']['cs']);
         $this->assertSame('<div>English</div>', $array['html']['en']);
         $this->assertSame('<div>Czech MP</div>', $array['marketplace']['cs']);
+    }
+
+    public function testToArrayWithNested(): void
+    {
+        $nested = [[['id' => 1, 'class' => 'empty', 'tag' => 'div', 'children' => []]]];
+
+        $content = new Content(
+            html: ['cs' => '<div>Czech</div>'],
+            marketplace: [],
+            nested: $nested,
+        );
+
+        $array = $content->toArray();
+
+        $this->assertArrayHasKey('nested', $array);
+        $this->assertSame($nested, $array['nested']);
     }
 
     public function testEmptyContent(): void
@@ -127,8 +171,34 @@ final class ContentTest extends TestCase
 
         $this->assertSame([], $content->html);
         $this->assertSame([], $content->marketplace);
+        $this->assertSame([], $content->nested);
         $this->assertNull($content->getHtmlDefault());
         $this->assertNull($content->getMarketplaceDefault());
+    }
+
+    public function testFromArrayToArrayRoundtrip(): void
+    {
+        $nested = [[['id' => 2, 'class' => 'empty', 'tag' => 'div', 'children' => []]]];
+
+        $data = [
+            'html' => [
+                'default' => '<div>Default</div>',
+                'cs' => '<div>Czech</div>',
+                'sk' => '<div>Slovak</div>',
+            ],
+            'marketplace' => [
+                'default' => '<div>Default MP</div>',
+                'cs' => '<div>Czech MP</div>',
+            ],
+            'nested' => $nested,
+        ];
+
+        $content = Content::fromArray($data);
+        $array = $content->toArray();
+
+        $this->assertSame($data['html'], $array['html']);
+        $this->assertSame($data['marketplace'], $array['marketplace']);
+        $this->assertSame($data['nested'], $array['nested']);
     }
 
     public function testContentIsReadonly(): void
@@ -140,5 +210,6 @@ final class ContentTest extends TestCase
 
         $this->assertSame(['cs' => '<div>Test</div>'], $content->html);
         $this->assertSame(['cs' => '<div>Test MP</div>'], $content->marketplace);
+        $this->assertSame([], $content->nested);
     }
 }
