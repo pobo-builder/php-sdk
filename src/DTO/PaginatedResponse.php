@@ -4,10 +4,13 @@ declare(strict_types=1);
 
 namespace Pobo\Sdk\DTO;
 
+/**
+ * @template T of Product|Category|Blog
+ */
 final class PaginatedResponse
 {
     /**
-     * @param array<Product|Category> $data
+     * @param array<T> $data
      */
     public function __construct(
         public readonly array $data,
@@ -28,23 +31,32 @@ final class PaginatedResponse
     }
 
     /**
+     * @template TEntity of Product|Category|Blog
      * @param array<string, mixed> $response
-     * @param class-string<Product|Category> $entityClass
+     * @param class-string<TEntity> $entityClass
+     * @return self<TEntity>
      */
     public static function fromArray(array $response, string $entityClass): self
     {
+        /** @var array<array<string, mixed>> $responseData */
+        $responseData = $response['data'] ?? [];
+
         $data = array_map(
             fn(array $item) => $entityClass::fromArray($item),
-            $response['data'] ?? []
+            $responseData,
         );
 
+        /** @var array{current_page?: int, per_page?: int, total?: int} $meta */
         $meta = $response['meta'] ?? [];
 
-        return new self(
+        /** @var self<TEntity> $result */
+        $result = new self(
             data: $data,
             currentPage: $meta['current_page'] ?? 1,
             perPage: $meta['per_page'] ?? 100,
             total: $meta['total'] ?? count($data),
         );
+
+        return $result;
     }
 }

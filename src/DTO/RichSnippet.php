@@ -30,7 +30,12 @@ final class RichSnippet
     {
         $value = $this->json[$language->value] ?? null;
 
-        return is_array($value) ? $value : null;
+        if (is_array($value)) {
+            /** @var array<string, mixed> $value */
+            return $value;
+        }
+
+        return null;
     }
 
     /**
@@ -38,6 +43,7 @@ final class RichSnippet
      */
     public static function fromArray(array $data): self
     {
+        /** @var array{html?: array<string, string>, json?: array<string, mixed>} $data */
         return new self(
             html: $data['html'] ?? [],
             json: $data['json'] ?? [],

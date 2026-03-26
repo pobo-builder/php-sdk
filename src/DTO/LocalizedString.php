@@ -47,10 +47,11 @@ final class LocalizedString
     }
 
     /**
-     * @param array<string, string|null> $data
+     * @param array<string, mixed> $data
      */
     public static function fromArray(array $data): self
     {
+        /** @var array<string, string|null> $data */
         return new self($data);
     }
 }

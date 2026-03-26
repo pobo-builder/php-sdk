@@ -36,9 +36,14 @@ final class SiteLink
      */
     public static function fromArray(array $data): self
     {
-        $list = [];
+        /** @var array<string, string> $html */
+        $html = $data['html'] ?? [];
 
-        foreach ($data['list'] ?? [] as $lang => $items) {
+        /** @var array<string, array<array{heading: string, slug: string}>> $rawList */
+        $rawList = $data['list'] ?? [];
+
+        $list = [];
+        foreach ($rawList as $lang => $items) {
             $list[$lang] = array_map(
                 fn(array $item) => SiteLinkItem::fromArray($item),
                 $items,
@@ -46,7 +51,7 @@ final class SiteLink
         }
 
         return new self(
-            html: $data['html'] ?? [],
+            html: $html,
             list: $list,
         );
     }

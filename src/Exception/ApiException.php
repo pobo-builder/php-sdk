@@ -9,6 +9,7 @@ class ApiException extends PoboException
     public function __construct(
         string $message,
         public readonly int $httpCode,
+        /** @var array<string, mixed>|null */
         public readonly ?array $responseBody = null,
     ) {
         parent::__construct($message, $httpCode);
@@ -19,9 +20,12 @@ class ApiException extends PoboException
         return new self('Authorization token required or invalid', 401);
     }
 
+    /**
+     * @param array<string, mixed>|null $body
+     */
     public static function fromResponse(int $httpCode, ?array $body): self
     {
-        $message = $body['message'] ?? $body['error'] ?? sprintf('API request failed with HTTP %d', $httpCode);
+        $message = is_string($body['message'] ?? null) ? $body['message'] : (is_string($body['error'] ?? null) ? $body['error'] : sprintf('API request failed with HTTP %d', $httpCode));
         return new self($message, $httpCode, $body);
     }
 }

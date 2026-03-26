@@ -4,6 +4,25 @@ declare(strict_types=1);
 
 namespace Pobo\Sdk\DTO;
 
+/**
+ * @phpstan-type BlogData array{
+ *     id: string,
+ *     is_visible: bool,
+ *     name: array<string, string|null>,
+ *     url: array<string, string|null>,
+ *     category?: string|null,
+ *     description?: array<string, string|null>,
+ *     seo_title?: array<string, string|null>,
+ *     seo_description?: array<string, string|null>,
+ *     content?: array<string, mixed>,
+ *     site_link?: array<string, mixed>,
+ *     rich_snippet?: array<string, mixed>,
+ *     images?: array<string>,
+ *     is_loaded?: bool,
+ *     created_at?: string,
+ *     updated_at?: string,
+ * }
+ */
 final class Blog
 {
     /**
@@ -68,6 +87,7 @@ final class Blog
      */
     public static function fromArray(array $data): self
     {
+        /** @var BlogData $data */
         return new self(
             id: $data['id'],
             isVisible: $data['is_visible'],

@@ -4,6 +4,17 @@ declare(strict_types=1);
 
 namespace Pobo\Sdk\DTO;
 
+/**
+ * @phpstan-type ImportResultData array{
+ *     success?: bool,
+ *     imported?: int,
+ *     updated?: int,
+ *     skipped?: int,
+ *     errors?: array<array{index: int, id: string, errors: array<string>}>,
+ *     values_imported?: int,
+ *     values_updated?: int,
+ * }
+ */
 final class ImportResult
 {
     /**
@@ -30,6 +41,7 @@ final class ImportResult
      */
     public static function fromArray(array $data): self
     {
+        /** @var ImportResultData $data */
         return new self(
             success: $data['success'] ?? false,
             imported: $data['imported'] ?? 0,

@@ -4,6 +4,14 @@ declare(strict_types=1);
 
 namespace Pobo\Sdk\DTO;
 
+/**
+ * @phpstan-type DeleteResultData array{
+ *     success?: bool,
+ *     deleted?: int,
+ *     skipped?: int,
+ *     errors?: array<array{index: int, id: string, errors: array<string>}>,
+ * }
+ */
 final class DeleteResult
 {
     /**
@@ -27,6 +35,7 @@ final class DeleteResult
      */
     public static function fromArray(array $data): self
     {
+        /** @var DeleteResultData $data */
         return new self(
             success: $data['success'] ?? false,
             deleted: $data['deleted'] ?? 0,

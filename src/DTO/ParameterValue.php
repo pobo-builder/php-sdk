@@ -28,6 +28,7 @@ final class ParameterValue
      */
     public static function fromArray(array $data): self
     {
+        /** @var array{id: int, value: string} $data */
         return new self(
             id: $data['id'],
             value: $data['value'],

@@ -4,6 +4,29 @@ declare(strict_types=1);
 
 namespace Pobo\Sdk\DTO;
 
+/**
+ * @phpstan-type ProductData array{
+ *     id: string,
+ *     is_visible: bool,
+ *     name: array<string, string|null>,
+ *     url: array<string, string|null>,
+ *     short_description?: array<string, string|null>,
+ *     description?: array<string, string|null>,
+ *     seo_title?: array<string, string|null>,
+ *     seo_description?: array<string, string|null>,
+ *     content?: array<string, mixed>,
+ *     site_link?: array<string, mixed>,
+ *     rich_snippet?: array<string, mixed>,
+ *     images?: array<string>,
+ *     categories_ids?: array<string>,
+ *     parameters_ids?: array<int>,
+ *     guid?: string|null,
+ *     is_loaded?: bool,
+ *     categories?: array<array{id: string, name: array<string, string>}>,
+ *     created_at?: string,
+ *     updated_at?: string,
+ * }
+ */
 final class Product
 {
     /**
@@ -83,6 +106,7 @@ final class Product
      */
     public static function fromArray(array $data): self
     {
+        /** @var ProductData $data */
         return new self(
             id: $data['id'],
             isVisible: $data['is_visible'],

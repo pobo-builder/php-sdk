@@ -20,6 +20,7 @@ final class WebhookPayload
      */
     public static function fromArray(array $data, WebhookEvent $event): self
     {
+        /** @var array{timestamp: string, eshop_id: int} $data */
         return new self(
             event: $event,
             timestamp: new \DateTimeImmutable($data['timestamp']),

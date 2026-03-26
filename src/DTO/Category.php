@@ -4,6 +4,24 @@ declare(strict_types=1);
 
 namespace Pobo\Sdk\DTO;
 
+/**
+ * @phpstan-type CategoryData array{
+ *     id: string,
+ *     is_visible: bool,
+ *     name: array<string, string|null>,
+ *     url: array<string, string|null>,
+ *     description?: array<string, string|null>,
+ *     seo_title?: array<string, string|null>,
+ *     seo_description?: array<string, string|null>,
+ *     content?: array<string, mixed>,
+ *     rich_snippet?: array<string, mixed>,
+ *     images?: array<string>,
+ *     guid?: string|null,
+ *     is_loaded?: bool,
+ *     created_at?: string,
+ *     updated_at?: string,
+ * }
+ */
 final class Category
 {
     /**
@@ -63,6 +81,7 @@ final class Category
      */
     public static function fromArray(array $data): self
     {
+        /** @var CategoryData $data */
         return new self(
             id: $data['id'],
             isVisible: $data['is_visible'],

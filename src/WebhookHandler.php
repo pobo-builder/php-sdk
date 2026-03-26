@@ -41,6 +41,7 @@ class WebhookHandler
     public function handleFromGlobals(): WebhookPayload
     {
         $payload = file_get_contents('php://input');
+        /** @var string $signature */
         $signature = $_SERVER['HTTP_X_WEBHOOK_SIGNATURE'] ?? '';
 
         if ($payload === false) {
@@ -72,6 +73,7 @@ class WebhookHandler
             throw WebhookException::invalidPayload();
         }
 
+        /** @var string $eventString */
         $eventString = $data['event'] ?? '';
         $event = WebhookEvent::fromString($eventString);
 

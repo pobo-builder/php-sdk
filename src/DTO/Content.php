@@ -70,6 +70,7 @@ final class Content
      */
     public static function fromArray(array $data): self
     {
+        /** @var array{html?: array<string, string>, marketplace?: array<string, string>, nested?: array<int, array<mixed>>} $data */
         return new self(
             html: $data['html'] ?? [],
             marketplace: $data['marketplace'] ?? [],

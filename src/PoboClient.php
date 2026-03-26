@@ -104,6 +104,7 @@ class PoboClient
     /**
      * @param array<IncludeContent|string>|null $include Optional content to include: IncludeContent::MARKETPLACE, IncludeContent::NESTED, IncludeContent::SITE_LINK, IncludeContent::RICH_SNIPPET
      * @param array<Language|string>|null $lang Languages to include in response. null = only default, [Language::ALL] = all languages
+     * @return PaginatedResponse<Product>
      * @throws ApiException
      */
     public function getProducts(
@@ -122,6 +123,7 @@ class PoboClient
     /**
      * @param array<IncludeContent|string>|null $include Optional content to include: IncludeContent::MARKETPLACE, IncludeContent::NESTED, IncludeContent::RICH_SNIPPET
      * @param array<Language|string>|null $lang Languages to include in response. null = only default, [Language::ALL] = all languages
+     * @return PaginatedResponse<Category>
      * @throws ApiException
      */
     public function getCategories(
@@ -140,6 +142,7 @@ class PoboClient
     /**
      * @param array<IncludeContent|string>|null $include Optional content to include: IncludeContent::MARKETPLACE, IncludeContent::NESTED, IncludeContent::SITE_LINK, IncludeContent::RICH_SNIPPET
      * @param array<Language|string>|null $lang Languages to include in response. null = only default, [Language::ALL] = all languages
+     * @return PaginatedResponse<Blog>
      * @throws ApiException
      */
     public function getBlogs(
@@ -276,6 +279,7 @@ class PoboClient
     }
 
     /**
+     * @param array<mixed> $items
      * @throws ValidationException
      */
     private function validateBulkSize(array $items): void
@@ -346,33 +350,30 @@ class PoboClient
      */
     private function request(string $method, string $endpoint, ?array $data = null): array
     {
-        $url = sprintf('%s%s', $this->baseUrl, $endpoint);
+        $url = rtrim($this->baseUrl, '/') . $endpoint;
 
-        $ch = curl_init();
+        $ch = curl_init($url);
 
         $headers = [
-            sprintf('Authorization: Bearer %s', $this->apiToken),
+            'Authorization: Bearer ' . $this->apiToken,
             'Content-Type: application/json',
             'Accept: application/json',
         ];
 
-        curl_setopt_array($ch, [
-            CURLOPT_URL => $url,
-            CURLOPT_RETURNTRANSFER => true,
-            CURLOPT_HTTPHEADER => $headers,
-            CURLOPT_TIMEOUT => $this->timeout,
-            CURLOPT_CONNECTTIMEOUT => 10,
-        ]);
+        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+        curl_setopt($ch, CURLOPT_HTTPHEADER, $headers);
+        curl_setopt($ch, CURLOPT_TIMEOUT, $this->timeout);
+        curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, 10);
 
         if ($method === 'POST') {
             curl_setopt($ch, CURLOPT_POST, true);
             if ($data !== null) {
-                curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($data));
+                curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($data, JSON_THROW_ON_ERROR));
             }
         } elseif ($method === 'DELETE') {
             curl_setopt($ch, CURLOPT_CUSTOMREQUEST, 'DELETE');
             if ($data !== null) {
-                curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($data));
+                curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($data, JSON_THROW_ON_ERROR));
             }
         }
 
@@ -382,10 +383,11 @@ class PoboClient
 
         curl_close($ch);
 
-        if ($response === false) {
+        if (!is_string($response)) {
             throw new ApiException(sprintf('cURL error: %s', $error), 0);
         }
 
+        /** @var array<string, mixed>|null $body */
         $body = json_decode($response, true);
 
         if ($httpCode === 401) {

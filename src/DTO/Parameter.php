@@ -33,6 +33,7 @@ final class Parameter
      */
     public static function fromArray(array $data): self
     {
+        /** @var array{id: int, name: string, values?: array<array<string, mixed>>} $data */
         return new self(
             id: $data['id'],
             name: $data['name'],
