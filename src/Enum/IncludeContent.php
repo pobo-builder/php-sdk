@@ -8,6 +8,8 @@ enum IncludeContent: string
 {
     case MARKETPLACE = 'marketplace';
     case NESTED = 'nested';
+    case SITE_LINK = 'site_link';
+    case RICH_SNIPPET = 'rich_snippet';
 
     /**
      * @return array<string>

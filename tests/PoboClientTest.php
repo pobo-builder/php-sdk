@@ -13,6 +13,7 @@ use Pobo\Sdk\DTO\Parameter;
 use Pobo\Sdk\DTO\ParameterValue;
 use Pobo\Sdk\DTO\Product;
 use Pobo\Sdk\Enum\IncludeContent;
+use Pobo\Sdk\Enum\Language;
 use Pobo\Sdk\Exception\ValidationException;
 use Pobo\Sdk\PoboClient;
 
@@ -442,5 +443,109 @@ final class PoboClientTest extends TestCase
         );
 
         $this->assertSame('?include=marketplace%2Cnested', $query);
+    }
+
+    public function testBuildQueryParamsWithLangAll(): void
+    {
+        $method = new \ReflectionMethod(PoboClient::class, 'buildQueryParams');
+
+        $query = $method->invoke(
+            $this->client,
+            null,
+            null,
+            null,
+            null,
+            null,
+            [Language::ALL],
+        );
+
+        $this->assertSame('?lang=all', $query);
+    }
+
+    public function testBuildQueryParamsWithLangSpecific(): void
+    {
+        $method = new \ReflectionMethod(PoboClient::class, 'buildQueryParams');
+
+        $query = $method->invoke(
+            $this->client,
+            null,
+            null,
+            null,
+            null,
+            null,
+            [Language::DEFAULT, Language::CS, Language::SK],
+        );
+
+        $this->assertSame('?lang=default%2Ccs%2Csk', $query);
+    }
+
+    public function testBuildQueryParamsWithLangString(): void
+    {
+        $method = new \ReflectionMethod(PoboClient::class, 'buildQueryParams');
+
+        $query = $method->invoke(
+            $this->client,
+            null,
+            null,
+            null,
+            null,
+            null,
+            ['default', 'cs'],
+        );
+
+        $this->assertSame('?lang=default%2Ccs', $query);
+    }
+
+    public function testBuildQueryParamsWithLangNull(): void
+    {
+        $method = new \ReflectionMethod(PoboClient::class, 'buildQueryParams');
+
+        $query = $method->invoke(
+            $this->client,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+        );
+
+        $this->assertSame('', $query);
+    }
+
+    public function testBuildQueryParamsWithLangAndInclude(): void
+    {
+        $method = new \ReflectionMethod(PoboClient::class, 'buildQueryParams');
+
+        $query = $method->invoke(
+            $this->client,
+            1,
+            50,
+            null,
+            null,
+            [IncludeContent::RICH_SNIPPET, IncludeContent::SITE_LINK],
+            [Language::ALL],
+        );
+
+        $this->assertStringContainsString('page=1', $query);
+        $this->assertStringContainsString('per_page=50', $query);
+        $this->assertStringContainsString('include=rich_snippet%2Csite_link', $query);
+        $this->assertStringContainsString('lang=all', $query);
+    }
+
+    public function testBuildQueryParamsWithIncludeSiteLinkAndRichSnippet(): void
+    {
+        $method = new \ReflectionMethod(PoboClient::class, 'buildQueryParams');
+
+        $query = $method->invoke(
+            $this->client,
+            null,
+            null,
+            null,
+            null,
+            [IncludeContent::SITE_LINK, IncludeContent::RICH_SNIPPET],
+        );
+
+        $this->assertSame('?include=site_link%2Crich_snippet', $query);
     }
 }

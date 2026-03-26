@@ -13,6 +13,7 @@ enum Language: string
     case DE = 'de';
     case PL = 'pl';
     case HU = 'hu';
+    case ALL = 'all';
 
     /**
      * @return array<string>

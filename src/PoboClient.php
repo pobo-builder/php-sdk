@@ -12,6 +12,7 @@ use Pobo\Sdk\DTO\PaginatedResponse;
 use Pobo\Sdk\DTO\Parameter;
 use Pobo\Sdk\DTO\Product;
 use Pobo\Sdk\Enum\IncludeContent;
+use Pobo\Sdk\Enum\Language;
 use Pobo\Sdk\Exception\ApiException;
 use Pobo\Sdk\Exception\ValidationException;
 
@@ -101,7 +102,8 @@ class PoboClient
     }
 
     /**
-     * @param array<IncludeContent|string>|null $include Optional content to include: IncludeContent::MARKETPLACE, IncludeContent::NESTED
+     * @param array<IncludeContent|string>|null $include Optional content to include: IncludeContent::MARKETPLACE, IncludeContent::NESTED, IncludeContent::SITE_LINK, IncludeContent::RICH_SNIPPET
+     * @param array<Language|string>|null $lang Languages to include in response. null = only default, [Language::ALL] = all languages
      * @throws ApiException
      */
     public function getProducts(
@@ -110,14 +112,16 @@ class PoboClient
         ?\DateTimeInterface $lastUpdateFrom = null,
         ?bool $isEdited = null,
         ?array $include = null,
+        ?array $lang = null,
     ): PaginatedResponse {
-        $query = $this->buildQueryParams($page, $perPage, $lastUpdateFrom, $isEdited, $include);
+        $query = $this->buildQueryParams($page, $perPage, $lastUpdateFrom, $isEdited, $include, $lang);
         $response = $this->request('GET', '/api/v2/rest/products' . $query);
         return PaginatedResponse::fromArray($response, Product::class);
     }
 
     /**
-     * @param array<IncludeContent|string>|null $include Optional content to include: IncludeContent::MARKETPLACE, IncludeContent::NESTED
+     * @param array<IncludeContent|string>|null $include Optional content to include: IncludeContent::MARKETPLACE, IncludeContent::NESTED, IncludeContent::RICH_SNIPPET
+     * @param array<Language|string>|null $lang Languages to include in response. null = only default, [Language::ALL] = all languages
      * @throws ApiException
      */
     public function getCategories(
@@ -126,14 +130,16 @@ class PoboClient
         ?\DateTimeInterface $lastUpdateFrom = null,
         ?bool $isEdited = null,
         ?array $include = null,
+        ?array $lang = null,
     ): PaginatedResponse {
-        $query = $this->buildQueryParams($page, $perPage, $lastUpdateFrom, $isEdited, $include);
+        $query = $this->buildQueryParams($page, $perPage, $lastUpdateFrom, $isEdited, $include, $lang);
         $response = $this->request('GET', '/api/v2/rest/categories' . $query);
         return PaginatedResponse::fromArray($response, Category::class);
     }
 
     /**
-     * @param array<IncludeContent|string>|null $include Optional content to include: IncludeContent::MARKETPLACE, IncludeContent::NESTED
+     * @param array<IncludeContent|string>|null $include Optional content to include: IncludeContent::MARKETPLACE, IncludeContent::NESTED, IncludeContent::SITE_LINK, IncludeContent::RICH_SNIPPET
+     * @param array<Language|string>|null $lang Languages to include in response. null = only default, [Language::ALL] = all languages
      * @throws ApiException
      */
     public function getBlogs(
@@ -142,8 +148,9 @@ class PoboClient
         ?\DateTimeInterface $lastUpdateFrom = null,
         ?bool $isEdited = null,
         ?array $include = null,
+        ?array $lang = null,
     ): PaginatedResponse {
-        $query = $this->buildQueryParams($page, $perPage, $lastUpdateFrom, $isEdited, $include);
+        $query = $this->buildQueryParams($page, $perPage, $lastUpdateFrom, $isEdited, $include, $lang);
         $response = $this->request('GET', '/api/v2/rest/blogs' . $query);
         return PaginatedResponse::fromArray($response, Blog::class);
     }
@@ -194,7 +201,8 @@ class PoboClient
     }
 
     /**
-     * @param array<IncludeContent|string>|null $include Optional content to include: IncludeContent::MARKETPLACE, IncludeContent::NESTED
+     * @param array<IncludeContent|string>|null $include Optional content to include
+     * @param array<Language|string>|null $lang Languages to include in response
      * @return \Generator<Product>
      * @throws ApiException
      */
@@ -202,11 +210,12 @@ class PoboClient
         ?\DateTimeInterface $lastUpdateFrom = null,
         ?bool $isEdited = null,
         ?array $include = null,
+        ?array $lang = null,
     ): \Generator {
         $page = 1;
 
         do {
-            $response = $this->getProducts($page, self::MAX_BULK_ITEMS, $lastUpdateFrom, $isEdited, $include);
+            $response = $this->getProducts($page, self::MAX_BULK_ITEMS, $lastUpdateFrom, $isEdited, $include, $lang);
 
             foreach ($response->data as $product) {
                 yield $product;
@@ -217,7 +226,8 @@ class PoboClient
     }
 
     /**
-     * @param array<IncludeContent|string>|null $include Optional content to include: IncludeContent::MARKETPLACE, IncludeContent::NESTED
+     * @param array<IncludeContent|string>|null $include Optional content to include
+     * @param array<Language|string>|null $lang Languages to include in response
      * @return \Generator<Category>
      * @throws ApiException
      */
@@ -225,11 +235,12 @@ class PoboClient
         ?\DateTimeInterface $lastUpdateFrom = null,
         ?bool $isEdited = null,
         ?array $include = null,
+        ?array $lang = null,
     ): \Generator {
         $page = 1;
 
         do {
-            $response = $this->getCategories($page, self::MAX_BULK_ITEMS, $lastUpdateFrom, $isEdited, $include);
+            $response = $this->getCategories($page, self::MAX_BULK_ITEMS, $lastUpdateFrom, $isEdited, $include, $lang);
 
             foreach ($response->data as $category) {
                 yield $category;
@@ -240,7 +251,8 @@ class PoboClient
     }
 
     /**
-     * @param array<IncludeContent|string>|null $include Optional content to include: IncludeContent::MARKETPLACE, IncludeContent::NESTED
+     * @param array<IncludeContent|string>|null $include Optional content to include
+     * @param array<Language|string>|null $lang Languages to include in response
      * @return \Generator<Blog>
      * @throws ApiException
      */
@@ -248,11 +260,12 @@ class PoboClient
         ?\DateTimeInterface $lastUpdateFrom = null,
         ?bool $isEdited = null,
         ?array $include = null,
+        ?array $lang = null,
     ): \Generator {
         $page = 1;
 
         do {
-            $response = $this->getBlogs($page, self::MAX_BULK_ITEMS, $lastUpdateFrom, $isEdited, $include);
+            $response = $this->getBlogs($page, self::MAX_BULK_ITEMS, $lastUpdateFrom, $isEdited, $include, $lang);
 
             foreach ($response->data as $blog) {
                 yield $blog;
@@ -279,6 +292,7 @@ class PoboClient
 
     /**
      * @param array<IncludeContent|string>|null $include
+     * @param array<Language|string>|null $lang
      */
     private function buildQueryParams(
         ?int $page,
@@ -286,6 +300,7 @@ class PoboClient
         ?\DateTimeInterface $lastUpdateFrom,
         ?bool $isEdited,
         ?array $include = null,
+        ?array $lang = null,
     ): string {
         $params = [];
 
@@ -311,6 +326,14 @@ class PoboClient
                 $include,
             );
             $params['include'] = implode(',', $values);
+        }
+
+        if ($lang !== null && $lang !== []) {
+            $values = array_map(
+                fn(Language|string $item) => $item instanceof Language ? $item->value : $item,
+                $lang,
+            );
+            $params['lang'] = implode(',', $values);
         }
 
         return $params === [] ? '' : sprintf('?%s', http_build_query($params));

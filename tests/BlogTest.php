@@ -8,6 +8,8 @@ use PHPUnit\Framework\TestCase;
 use Pobo\Sdk\DTO\Blog;
 use Pobo\Sdk\DTO\Content;
 use Pobo\Sdk\DTO\LocalizedString;
+use Pobo\Sdk\DTO\RichSnippet;
+use Pobo\Sdk\DTO\SiteLink;
 use Pobo\Sdk\Enum\Language;
 
 final class BlogTest extends TestCase
@@ -229,5 +231,47 @@ final class BlogTest extends TestCase
 
         $array = $blog->toArray();
         $this->assertSame($images, $array['images']);
+    }
+
+    public function testBlogFromArrayWithSiteLinkAndRichSnippet(): void
+    {
+        $data = [
+            'id' => 'BLOG-EXTRAS',
+            'is_visible' => true,
+            'name' => ['default' => 'Blog'],
+            'url' => ['default' => 'https://example.com'],
+            'site_link' => [
+                'html' => ['default' => '<div id="pobo-site-link">nav</div>'],
+                'list' => [
+                    'default' => [['heading' => 'Nadpis', 'slug' => 'nadpis']],
+                ],
+            ],
+            'rich_snippet' => [
+                'html' => ['default' => '<script type="application/ld+json">{"@type":"FAQPage"}</script>'],
+                'json' => ['default' => ['@type' => 'FAQPage']],
+            ],
+        ];
+
+        $blog = Blog::fromArray($data);
+
+        $this->assertInstanceOf(SiteLink::class, $blog->siteLink);
+        $this->assertInstanceOf(RichSnippet::class, $blog->richSnippet);
+        $this->assertStringContainsString('pobo-site-link', $blog->siteLink->getHtml(Language::DEFAULT));
+        $this->assertSame('FAQPage', $blog->richSnippet->getJson(Language::DEFAULT)['@type']);
+    }
+
+    public function testBlogFromArrayWithoutSiteLinkAndRichSnippet(): void
+    {
+        $data = [
+            'id' => 'BLOG-PLAIN',
+            'is_visible' => true,
+            'name' => ['default' => 'Blog'],
+            'url' => ['default' => 'https://example.com'],
+        ];
+
+        $blog = Blog::fromArray($data);
+
+        $this->assertNull($blog->siteLink);
+        $this->assertNull($blog->richSnippet);
     }
 }

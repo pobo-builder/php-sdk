@@ -8,6 +8,7 @@ use PHPUnit\Framework\TestCase;
 use Pobo\Sdk\DTO\Category;
 use Pobo\Sdk\DTO\Content;
 use Pobo\Sdk\DTO\LocalizedString;
+use Pobo\Sdk\DTO\RichSnippet;
 use Pobo\Sdk\Enum\Language;
 
 final class CategoryTest extends TestCase
@@ -213,5 +214,38 @@ final class CategoryTest extends TestCase
         $this->assertInstanceOf(\DateTimeInterface::class, $category->updatedAt);
         $this->assertSame('2024-01-15', $category->createdAt->format('Y-m-d'));
         $this->assertSame('2024-01-16', $category->updatedAt->format('Y-m-d'));
+    }
+
+    public function testCategoryFromArrayWithRichSnippet(): void
+    {
+        $data = [
+            'id' => 'CAT-RICH',
+            'is_visible' => true,
+            'name' => ['default' => 'Category'],
+            'url' => ['default' => 'https://example.com'],
+            'rich_snippet' => [
+                'html' => ['default' => '<script type="application/ld+json">{"@type":"FAQPage"}</script>'],
+                'json' => ['default' => ['@type' => 'FAQPage', 'mainEntity' => []]],
+            ],
+        ];
+
+        $category = Category::fromArray($data);
+
+        $this->assertInstanceOf(RichSnippet::class, $category->richSnippet);
+        $this->assertSame('FAQPage', $category->richSnippet->getJson(Language::DEFAULT)['@type']);
+    }
+
+    public function testCategoryFromArrayWithoutRichSnippet(): void
+    {
+        $data = [
+            'id' => 'CAT-PLAIN',
+            'is_visible' => true,
+            'name' => ['default' => 'Category'],
+            'url' => ['default' => 'https://example.com'],
+        ];
+
+        $category = Category::fromArray($data);
+
+        $this->assertNull($category->richSnippet);
     }
 }

@@ -8,6 +8,8 @@ use PHPUnit\Framework\TestCase;
 use Pobo\Sdk\DTO\Content;
 use Pobo\Sdk\DTO\LocalizedString;
 use Pobo\Sdk\DTO\Product;
+use Pobo\Sdk\DTO\RichSnippet;
+use Pobo\Sdk\DTO\SiteLink;
 use Pobo\Sdk\Enum\Language;
 
 final class ProductTest extends TestCase
@@ -222,5 +224,66 @@ final class ProductTest extends TestCase
 
         $this->assertSame('550e8400-e29b-41d4-a716-446655440000', $product->guid);
         $this->assertTrue($product->isLoaded);
+    }
+
+    public function testProductFromArrayWithSiteLink(): void
+    {
+        $data = [
+            'id' => 'PROD-SITE',
+            'is_visible' => true,
+            'name' => ['default' => 'Product'],
+            'url' => ['default' => 'https://example.com'],
+            'site_link' => [
+                'html' => ['default' => '<div id="pobo-site-link"><nav><a href="#nadpis">Nadpis</a></nav></div>'],
+                'list' => [
+                    'default' => [
+                        ['heading' => 'Nadpis', 'slug' => 'nadpis'],
+                    ],
+                ],
+            ],
+        ];
+
+        $product = Product::fromArray($data);
+
+        $this->assertInstanceOf(SiteLink::class, $product->siteLink);
+        $this->assertStringContainsString('pobo-site-link', $product->siteLink->getHtml(Language::DEFAULT));
+        $this->assertSame('nadpis', $product->siteLink->getList(Language::DEFAULT)[0]->slug);
+    }
+
+    public function testProductFromArrayWithRichSnippet(): void
+    {
+        $data = [
+            'id' => 'PROD-RICH',
+            'is_visible' => true,
+            'name' => ['default' => 'Product'],
+            'url' => ['default' => 'https://example.com'],
+            'rich_snippet' => [
+                'html' => ['default' => '<script type="application/ld+json">{"@type":"FAQPage"}</script>'],
+                'json' => [
+                    'default' => ['@type' => 'FAQPage', 'mainEntity' => []],
+                ],
+            ],
+        ];
+
+        $product = Product::fromArray($data);
+
+        $this->assertInstanceOf(RichSnippet::class, $product->richSnippet);
+        $this->assertStringContainsString('FAQPage', $product->richSnippet->getHtml(Language::DEFAULT));
+        $this->assertSame('FAQPage', $product->richSnippet->getJson(Language::DEFAULT)['@type']);
+    }
+
+    public function testProductFromArrayWithoutSiteLinkAndRichSnippet(): void
+    {
+        $data = [
+            'id' => 'PROD-PLAIN',
+            'is_visible' => true,
+            'name' => ['default' => 'Product'],
+            'url' => ['default' => 'https://example.com'],
+        ];
+
+        $product = Product::fromArray($data);
+
+        $this->assertNull($product->siteLink);
+        $this->assertNull($product->richSnippet);
     }
 }

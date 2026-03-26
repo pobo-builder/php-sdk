@@ -13,6 +13,8 @@ final class IncludeContentTest extends TestCase
     {
         $this->assertSame('marketplace', IncludeContent::MARKETPLACE->value);
         $this->assertSame('nested', IncludeContent::NESTED->value);
+        $this->assertSame('site_link', IncludeContent::SITE_LINK->value);
+        $this->assertSame('rich_snippet', IncludeContent::RICH_SNIPPET->value);
     }
 
     public function testValues(): void
@@ -21,13 +23,17 @@ final class IncludeContentTest extends TestCase
 
         $this->assertContains('marketplace', $values);
         $this->assertContains('nested', $values);
-        $this->assertCount(2, $values);
+        $this->assertContains('site_link', $values);
+        $this->assertContains('rich_snippet', $values);
+        $this->assertCount(4, $values);
     }
 
     public function testIsValidReturnsTrue(): void
     {
         $this->assertTrue(IncludeContent::isValid('marketplace'));
         $this->assertTrue(IncludeContent::isValid('nested'));
+        $this->assertTrue(IncludeContent::isValid('site_link'));
+        $this->assertTrue(IncludeContent::isValid('rich_snippet'));
     }
 
     public function testIsValidReturnsFalse(): void
@@ -41,10 +47,10 @@ final class IncludeContentTest extends TestCase
 
     public function testCanBeUsedInArray(): void
     {
-        $include = [IncludeContent::MARKETPLACE, IncludeContent::NESTED];
+        $include = [IncludeContent::MARKETPLACE, IncludeContent::NESTED, IncludeContent::SITE_LINK, IncludeContent::RICH_SNIPPET];
 
         $values = array_map(fn(IncludeContent $item) => $item->value, $include);
 
-        $this->assertSame(['marketplace', 'nested'], $values);
+        $this->assertSame(['marketplace', 'nested', 'site_link', 'rich_snippet'], $values);
     }
 }

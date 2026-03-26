@@ -20,6 +20,11 @@ final class LanguageTest extends TestCase
         $this->assertSame('hu', Language::HU->value);
     }
 
+    public function testAllCase(): void
+    {
+        $this->assertSame('all', Language::ALL->value);
+    }
+
     public function testValues(): void
     {
         $values = Language::values();
@@ -31,7 +36,8 @@ final class LanguageTest extends TestCase
         $this->assertContains('de', $values);
         $this->assertContains('pl', $values);
         $this->assertContains('hu', $values);
-        $this->assertCount(7, $values);
+        $this->assertContains('all', $values);
+        $this->assertCount(8, $values);
     }
 
     public function testIsValidReturnsTrue(): void
@@ -40,6 +46,7 @@ final class LanguageTest extends TestCase
         $this->assertTrue(Language::isValid('cs'));
         $this->assertTrue(Language::isValid('sk'));
         $this->assertTrue(Language::isValid('en'));
+        $this->assertTrue(Language::isValid('all'));
     }
 
     public function testIsValidReturnsFalse(): void
