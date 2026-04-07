@@ -547,7 +547,7 @@ $name->toArray();            // ['default' => '...', 'cs' => '...', ...]
 | Name length                  | 250 chars    |
 | URL length                   | 255 chars    |
 | Image URL length             | 650 chars    |
-| Description length           | 65,000 chars |
+| Description length           | 500,000 chars |
 | SEO description length       | 500 chars    |
 
 ## License
