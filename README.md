@@ -20,6 +20,12 @@ composer require pobo-builder/php-sdk
 
 ## Quick Start
 
+### Authentication
+
+The SDK uses bearer token authentication. You can obtain your **API token** and **webhook secret** in your Pobo administration under the e-shop settings (REST API section).
+
+The token is sent as `Authorization: Bearer {token}` on every request and is bound to a single e-shop.
+
 ### API Client
 
 ```php
@@ -42,6 +48,18 @@ $client = new PoboClient(
 3. Products (depends on categories and parameters)
 4. Blogs (no dependencies)
 ```
+
+### Multilang Validation Rules
+
+The API enforces a "language consistency" rule across multilang fields:
+
+- `name.default` and `url.default` are **always required**.
+- If any language key (e.g. `sk`) appears in any multilang field of an item, then `name.{lang}` and `url.{lang}` become required for that item.
+- Other multilang fields (`short_description`, `description`, `seo_title`, `seo_description`) may have `null` values, but the language key must be present in the field if used elsewhere.
+- All `url.*` values must start with `https://`.
+- Records that fail validation are **skipped**, not aborted — the response reports them in `errors[]` with `index`, `id`, and a list of messages. The rest of the batch is imported.
+
+> **Tip:** The `LocalizedString::withTranslation()` helper sets the value for a given language; use it consistently across `name`, `url` and other fields when adding a new locale to an item.
 
 ### Import Parameters
 
@@ -234,6 +252,8 @@ echo sprintf('Deleted: %d', $result->deleted);
 
 ## Export
 
+> **Important:** When `isEdited` is not provided, the server applies a default of `true` and returns **only products/categories/blogs that have been edited in Pobo** (`is_loaded = true`). To export everything, pass `isEdited: false` explicitly.
+
 ### Export Products
 
 ```php
@@ -250,12 +270,15 @@ foreach ($client->iterateProducts() as $product) {
     echo sprintf("%s: %s\n", $product->id, $product->name->getDefault());
 }
 
-// Filter by last update time
+// Filter by last update time (sent to API as Y-m-d H:i:s in server timezone)
 $since = new DateTime('2024-01-01 00:00:00');
 $response = $client->getProducts(lastUpdateFrom: $since);
 
-// Filter only edited products
+// Filter only edited products (= is_loaded on server side)
 $response = $client->getProducts(isEdited: true);
+
+// Get ALL products including ones never edited in Pobo
+$response = $client->getProducts(isEdited: false);
 
 // Include optional content (marketplace HTML, raw widget JSON)
 use Pobo\Sdk\Enum\IncludeContent;
@@ -376,6 +399,8 @@ foreach ($client->iterateBlogs(include: [IncludeContent::MARKETPLACE]) as $blog)
 
 Anchor navigation generated from H2 headings in content widgets. Available for products and blogs.
 
+> **E-shop config required:** Site links are returned only if `enable_site_link` is enabled on the e-shop in Pobo administration. Without that flag the `site_link` field will be empty even when `IncludeContent::SITE_LINK` is requested.
+
 ```php
 use Pobo\Sdk\Enum\IncludeContent;
 use Pobo\Sdk\Enum\Language;
@@ -397,6 +422,8 @@ foreach ($client->iterateProducts(include: [IncludeContent::SITE_LINK], lang: [L
 ## Rich Snippets
 
 JSON-LD structured data (FAQPage schema) generated from FAQ widgets. Available for products, categories, and blogs.
+
+> **E-shop config required:** Rich snippets are returned only if `enable_rich_snippet` is enabled on the e-shop in Pobo administration. Without that flag the `rich_snippet` field will be empty even when `IncludeContent::RICH_SNIPPET` is requested.
 
 ```php
 use Pobo\Sdk\Enum\IncludeContent;
@@ -422,6 +449,24 @@ foreach ($client->iterateCategories(include: [IncludeContent::RICH_SNIPPET]) as 
 ```
 
 ## Webhook Handler
+
+Pobo can notify your application when content is changed in the administration. You register a webhook URL in the Pobo e-shop settings and receive `POST` requests signed with HMAC-SHA256.
+
+### Events
+
+| Event                | Constant                          | Fired when                                         |
+|----------------------|-----------------------------------|----------------------------------------------------|
+| `Products.update`    | `WebhookEvent::PRODUCTS_UPDATE`   | Any product content was edited and saved in Pobo   |
+| `Categories.update`  | `WebhookEvent::CATEGORIES_UPDATE` | Any category content was edited and saved in Pobo  |
+| `Blogs.update`       | `WebhookEvent::BLOGS_UPDATE`      | Any blog content was edited and saved in Pobo      |
+
+Each request carries:
+
+- Header `X-Webhook-Signature` — HMAC-SHA256 of the raw body using your webhook secret.
+- Header `X-Webhook-Event` — event name (informational; the SDK reads the event from the body).
+- JSON body — `{ "event": "...", "timestamp": "ISO-8601", "eshop_id": 123 }`.
+
+The webhook does **not** carry the changed entities themselves; it is a notification to trigger a sync via the export endpoints (`getProducts` / `iterateProducts` etc., typically combined with `lastUpdateFrom`).
 
 ### Basic Usage
 
@@ -485,6 +530,16 @@ try {
 }
 ```
 
+### Exception Types
+
+| Exception              | Thrown when                                                                                                               |
+|------------------------|---------------------------------------------------------------------------------------------------------------------------|
+| `ValidationException`  | Local pre-flight checks fail — empty payload or **more than 100 items** in a bulk import/delete. The HTTP request is not sent. |
+| `ApiException`         | The HTTP request fails (network/cURL error) or the API returns `>= 400`. `httpCode` and parsed `responseBody` are exposed. |
+| `WebhookException`     | The webhook signature is missing/invalid, the body cannot be parsed, or the event name is unknown.                        |
+
+> **Note:** Per-item validation failures during bulk import (e.g. invalid URL, missing language) do **not** raise `ApiException`. They appear in `$result->errors[]` while the rest of the batch is processed. Always inspect `$result->hasErrors()` after a successful call.
+
 ## Localized Strings
 
 ```php
@@ -505,6 +560,8 @@ $name->getDefault();         // 'Default Name'
 $name->get(Language::CS);    // 'Czech Name'
 $name->toArray();            // ['default' => '...', 'cs' => '...', ...]
 ```
+
+> **About `default`:** `default` is a separate, virtual locale — **not an alias for `cs` or any other language**. It is the fallback content used by Pobo when a specific language variant is missing. `name.default` and `url.default` are required on import; per-language values (`cs`, `sk`, …) are optional and follow the multilang validation rule above.
 
 ### Supported Languages
 
@@ -549,6 +606,34 @@ $name->toArray();            // ['default' => '...', 'cs' => '...', ...]
 | Image URL length             | 650 chars    |
 | Description length           | 500,000 chars |
 | SEO description length       | 500 chars    |
+
+## Testing
+
+### Unit Tests
+
+```bash
+vendor/bin/phpunit --testsuite=Unit
+```
+
+Unit tests are pure (no network) and run on every CI build across PHP 8.1–8.5.
+
+### Integration Tests
+
+Integration tests hit the real `api.pobo.space` API and verify that the SDK's wire format is in sync with the server. They require a dedicated test e-shop and a valid REST API token.
+
+```bash
+POBO_API_TOKEN="your-test-eshop-token" vendor/bin/phpunit --testsuite=Integration
+```
+
+If `POBO_API_TOKEN` is not set, all tests in the suite are marked **skipped** (not failed).
+
+The CI workflow runs integration tests automatically on:
+
+- pushes to `master`,
+- PRs **from the same repository** (PRs from forks are skipped — secrets are not exposed there),
+- manual dispatch (`workflow_dispatch`).
+
+Each run uses a unique ID prefix combining `GITHUB_RUN_ID` and a random suffix, and `tearDown()` removes anything the test created. Two PRs running simultaneously cannot collide.
 
 ## License
 

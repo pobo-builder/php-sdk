@@ -5,6 +5,7 @@ on:
     branches: [main, master]
   pull_request:
     branches: [main, master]
+  workflow_dispatch:
 
 jobs:
   test:
@@ -34,8 +35,8 @@ jobs:
       - name: Install dependencies
         run: composer install --prefer-dist --no-progress
 
-      - name: Run tests
-        run: vendor/bin/phpunit --colors=always
+      - name: Run unit tests
+        run: vendor/bin/phpunit --colors=always --testsuite=Unit
 
   phpstan:
     runs-on: ubuntu-latest
@@ -83,3 +84,39 @@ jobs:
 
       - name: Check PHP syntax
         run: find src tests -name "*.php" -exec php -l {} \;
+
+  integration:
+    runs-on: ubuntu-latest
+    name: Integration (real API)
+
+    # Skip on PRs from forks (they have no access to repository secrets).
+    # Runs on push to master/main, on PRs from the same repository, and on manual dispatch.
+    if: |
+      github.event_name == 'workflow_dispatch'
+      || github.event_name == 'push'
+      || (github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository)
+
+    # Serialize integration runs so concurrent jobs do not race on the same test e-shop.
+    concurrency:
+      group: integration-${{ github.ref }}
+      cancel-in-progress: false
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          extensions: curl, json
+          coverage: none
+
+      - name: Install dependencies
+        run: composer install --prefer-dist --no-progress
+
+      - name: Run integration tests
+        env:
+          POBO_API_TOKEN: ${{ secrets.POBO_API_TOKEN }}
+          POBO_BASE_URL: https://api.pobo.space
+        run: vendor/bin/phpunit --colors=always --testsuite=Integration --display-skipped
