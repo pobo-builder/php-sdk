@@ -22,7 +22,8 @@ final class CategoryLifecycleTest extends IntegrationTestCase
                 ->withTranslation(Language::CS, 'SDK Integration Test Kategorie'),
             url: LocalizedString::create(sprintf('https://example.com/%s', $categoryId))
                 ->withTranslation(Language::CS, sprintf('https://example.com/cs/%s', $categoryId)),
-            description: LocalizedString::create('<p>Created by SDK CI</p>'),
+            description: LocalizedString::create('<p>Created by SDK CI</p>')
+                ->withTranslation(Language::CS, '<p>Vytvořeno SDK CI</p>'),
         );
 
         $importResult = $this->client->importCategories([$category]);

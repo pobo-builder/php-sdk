@@ -22,7 +22,10 @@ final class ProductLifecycleTest extends IntegrationTestCase
                 ->withTranslation(Language::CS, 'SDK Integration Test Produkt'),
             url: LocalizedString::create(sprintf('https://example.com/%s', $productId))
                 ->withTranslation(Language::CS, sprintf('https://example.com/cs/%s', $productId)),
-            shortDescription: LocalizedString::create('Created by SDK CI'),
+            shortDescription: LocalizedString::create('Created by SDK CI')
+                ->withTranslation(Language::CS, 'Vytvořeno SDK CI'),
+            description: LocalizedString::create('<p>Created by SDK CI</p>')
+                ->withTranslation(Language::CS, '<p>Vytvořeno SDK CI</p>'),
         );
 
         $importResult = $this->client->importProducts([$product]);
