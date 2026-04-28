@@ -4,12 +4,21 @@ declare(strict_types=1);
 
 namespace Pobo\Sdk\Tests\Integration;
 
+use Faker\Factory as FakerFactory;
+use Faker\Generator as FakerGenerator;
 use PHPUnit\Framework\TestCase;
+use Pobo\Sdk\DTO\Blog;
+use Pobo\Sdk\DTO\Category;
+use Pobo\Sdk\DTO\LocalizedString;
+use Pobo\Sdk\DTO\Product;
+use Pobo\Sdk\Enum\Language;
 use Pobo\Sdk\PoboClient;
 
 abstract class IntegrationTestCase extends TestCase
 {
     protected PoboClient $client;
+
+    protected FakerGenerator $faker;
 
     /**
      * Unique prefix used for IDs created by a single test run.
@@ -51,6 +60,8 @@ abstract class IntegrationTestCase extends TestCase
             $runId = (string) getmypid();
         }
         $this->idPrefix = sprintf('CI-%s-%s', $runId, bin2hex(random_bytes(3)));
+
+        $this->faker = FakerFactory::create('en_US');
     }
 
     protected function tearDown(): void
@@ -120,5 +131,85 @@ abstract class IntegrationTestCase extends TestCase
     protected function uniqueId(string $kind): string
     {
         return sprintf('%s-%s-%s', $this->idPrefix, $kind, bin2hex(random_bytes(2)));
+    }
+
+    /**
+     * Build a Product with realistic faker content. If $id is null, a new unique
+     * ID is generated and tracked for cleanup. If $id is provided, the caller is
+     * responsible for tracking it (typical for update tests reusing existing IDs).
+     */
+    protected function makeProduct(?string $id = null): Product
+    {
+        if ($id === null) {
+            $id = $this->uniqueId('prod');
+            $this->trackProduct($id);
+        }
+
+        $nameEn = $this->faker->unique()->words(3, true);
+        $nameCs = sprintf('Produkt %s', $this->faker->unique()->word());
+        $slug = $this->faker->slug(2);
+
+        return new Product(
+            id: $id,
+            isVisible: true,
+            name: LocalizedString::create($nameEn)->withTranslation(Language::CS, $nameCs),
+            url: LocalizedString::create(sprintf('https://example.com/%s', $slug))
+                ->withTranslation(Language::CS, sprintf('https://example.com/cs/%s', $slug)),
+            shortDescription: LocalizedString::create($this->faker->sentence(8))
+                ->withTranslation(Language::CS, $this->faker->sentence(8)),
+            description: LocalizedString::create(sprintf('<p>%s</p>', $this->faker->paragraph(3)))
+                ->withTranslation(Language::CS, sprintf('<p>%s</p>', $this->faker->paragraph(3))),
+        );
+    }
+
+    /**
+     * Build a Category with realistic faker content. See {@see makeProduct()} for ID behavior.
+     */
+    protected function makeCategory(?string $id = null): Category
+    {
+        if ($id === null) {
+            $id = $this->uniqueId('cat');
+            $this->trackCategory($id);
+        }
+
+        $nameEn = $this->faker->unique()->words(2, true);
+        $nameCs = sprintf('Kategorie %s', $this->faker->unique()->word());
+        $slug = $this->faker->slug(2);
+
+        return new Category(
+            id: $id,
+            isVisible: true,
+            name: LocalizedString::create($nameEn)->withTranslation(Language::CS, $nameCs),
+            url: LocalizedString::create(sprintf('https://example.com/%s', $slug))
+                ->withTranslation(Language::CS, sprintf('https://example.com/cs/%s', $slug)),
+            description: LocalizedString::create(sprintf('<p>%s</p>', $this->faker->paragraph(2)))
+                ->withTranslation(Language::CS, sprintf('<p>%s</p>', $this->faker->paragraph(2))),
+        );
+    }
+
+    /**
+     * Build a Blog with realistic faker content. See {@see makeProduct()} for ID behavior.
+     */
+    protected function makeBlog(?string $id = null): Blog
+    {
+        if ($id === null) {
+            $id = $this->uniqueId('blog');
+            $this->trackBlog($id);
+        }
+
+        $titleEn = $this->faker->unique()->sentence(4);
+        $titleCs = sprintf('Článek %s', $this->faker->unique()->word());
+        $slug = $this->faker->slug(3);
+
+        return new Blog(
+            id: $id,
+            isVisible: true,
+            name: LocalizedString::create($titleEn)->withTranslation(Language::CS, $titleCs),
+            url: LocalizedString::create(sprintf('https://example.com/blog/%s', $slug))
+                ->withTranslation(Language::CS, sprintf('https://example.com/cs/blog/%s', $slug)),
+            category: $this->faker->randomElement(['news', 'tips', 'reviews', 'guides']),
+            description: LocalizedString::create(sprintf('<p>%s</p>', $this->faker->paragraph(4)))
+                ->withTranslation(Language::CS, sprintf('<p>%s</p>', $this->faker->paragraph(4))),
+        );
     }
 }

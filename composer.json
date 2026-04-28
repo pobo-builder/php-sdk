@@ -13,9 +13,9 @@
     "homepage": "https://github.com/pobo-builder/php-sdk",
     "authors": [
         {
-            "name": "Pobo",
+            "name": "Tomas Smetka",
             "email": "tomas@pobo.cz",
-            "homepage": "https://pobo.cz"
+            "homepage": "https://pobo.space"
         }
     ],
     "support": {
@@ -28,8 +28,9 @@
         "ext-json": "*"
     },
     "require-dev": {
-        "phpunit/phpunit": "^10.0",
-        "phpstan/phpstan": "^2.0"
+        "phpunit/phpunit": "^10.5",
+        "phpstan/phpstan": "^2.1",
+        "fakerphp/faker": "^1.23"
     },
     "autoload": {
         "psr-4": {
