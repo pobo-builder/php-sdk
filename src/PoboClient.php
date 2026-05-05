@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Pobo\Sdk;
 
 use Pobo\Sdk\DTO\Blog;
+use Pobo\Sdk\DTO\Brand;
 use Pobo\Sdk\DTO\Category;
 use Pobo\Sdk\DTO\DeleteResult;
 use Pobo\Sdk\DTO\ImportResult;
@@ -84,6 +85,24 @@ class PoboClient
     }
 
     /**
+     * @param array<Brand|array<string, mixed>> $brands
+     * @throws ValidationException
+     * @throws ApiException
+     */
+    public function importBrands(array $brands): ImportResult
+    {
+        $this->validateBulkSize($brands);
+
+        $payload = array_map(
+            fn($brand) => $brand instanceof Brand ? $brand->toArray() : $brand,
+            $brands
+        );
+
+        $response = $this->request('POST', '/api/v2/rest/brands', $payload);
+        return ImportResult::fromArray($response);
+    }
+
+    /**
      * @param array<Blog|array<string, mixed>> $blogs
      * @throws ValidationException
      * @throws ApiException
@@ -142,6 +161,25 @@ class PoboClient
     /**
      * @param array<IncludeContent|string>|null $include Optional content to include: IncludeContent::MARKETPLACE, IncludeContent::NESTED, IncludeContent::SITE_LINK, IncludeContent::RICH_SNIPPET
      * @param array<Language|string>|null $lang Languages to include in response. null = only default, [Language::ALL] = all languages
+     * @return PaginatedResponse<Brand>
+     * @throws ApiException
+     */
+    public function getBrands(
+        ?int $page = null,
+        ?int $perPage = null,
+        ?\DateTimeInterface $lastUpdateFrom = null,
+        ?bool $isEdited = null,
+        ?array $include = null,
+        ?array $lang = null,
+    ): PaginatedResponse {
+        $query = $this->buildQueryParams($page, $perPage, $lastUpdateFrom, $isEdited, $include, $lang);
+        $response = $this->request('GET', '/api/v2/rest/brands' . $query);
+        return PaginatedResponse::fromArray($response, Brand::class);
+    }
+
+    /**
+     * @param array<IncludeContent|string>|null $include Optional content to include: IncludeContent::MARKETPLACE, IncludeContent::NESTED, IncludeContent::SITE_LINK, IncludeContent::RICH_SNIPPET
+     * @param array<Language|string>|null $lang Languages to include in response. null = only default, [Language::ALL] = all languages
      * @return PaginatedResponse<Blog>
      * @throws ApiException
      */
@@ -185,6 +223,21 @@ class PoboClient
         $payload = array_map(fn(string $id) => ['id' => $id], $ids);
 
         $response = $this->request('DELETE', '/api/v2/rest/categories', $payload);
+        return DeleteResult::fromArray($response);
+    }
+
+    /**
+     * @param array<string> $ids
+     * @throws ValidationException
+     * @throws ApiException
+     */
+    public function deleteBrands(array $ids): DeleteResult
+    {
+        $this->validateBulkSize($ids);
+
+        $payload = array_map(fn(string $id) => ['id' => $id], $ids);
+
+        $response = $this->request('DELETE', '/api/v2/rest/brands', $payload);
         return DeleteResult::fromArray($response);
     }
 
@@ -247,6 +300,31 @@ class PoboClient
 
             foreach ($response->data as $category) {
                 yield $category;
+            }
+
+            $page++;
+        } while ($response->hasMorePages());
+    }
+
+    /**
+     * @param array<IncludeContent|string>|null $include Optional content to include
+     * @param array<Language|string>|null $lang Languages to include in response
+     * @return \Generator<Brand>
+     * @throws ApiException
+     */
+    public function iterateBrands(
+        ?\DateTimeInterface $lastUpdateFrom = null,
+        ?bool $isEdited = null,
+        ?array $include = null,
+        ?array $lang = null,
+    ): \Generator {
+        $page = 1;
+
+        do {
+            $response = $this->getBrands($page, self::MAX_BULK_ITEMS, $lastUpdateFrom, $isEdited, $include, $lang);
+
+            foreach ($response->data as $brand) {
+                yield $brand;
             }
 
             $page++;

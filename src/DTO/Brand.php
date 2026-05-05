@@ -5,63 +5,40 @@ declare(strict_types=1);
 namespace Pobo\Sdk\DTO;
 
 /**
- * @phpstan-type ProductData array{
+ * @phpstan-type BrandData array{
  *     id: string,
  *     is_visible: bool,
  *     name: array<string, string|null>,
  *     url: array<string, string|null>,
- *     short_description?: array<string, string|null>,
+ *     image_preview?: string|null,
  *     description?: array<string, string|null>,
  *     seo_title?: array<string, string|null>,
  *     seo_description?: array<string, string|null>,
  *     content?: array<string, mixed>,
  *     site_link?: array<string, mixed>,
  *     rich_snippet?: array<string, mixed>,
- *     images?: array<string>,
- *     categories_ids?: array<string>,
- *     parameters_ids?: array<int>,
- *     brand_id?: string|null,
  *     guid?: string|null,
  *     is_loaded?: bool,
- *     categories?: array<array{id: string, name: array<string, string>}>,
  *     created_at?: string,
  *     updated_at?: string,
  * }
  */
-final class Product
+final class Brand
 {
-    /**
-     * Sentinel meaning "do not send brand_id in the import payload" — the server
-     * will leave product.brand_id unchanged. Distinct from passing null, which
-     * explicitly clears the brand assignment in the DB.
-     */
-    public const BRAND_ID_UNSET = "\x00POBO_BRAND_ID_UNSET\x00";
-
-    /**
-     * @param array<string> $images
-     * @param array<string> $categoriesIds
-     * @param array<int> $parametersIds
-     * @param array<array{id: string, name: array<string, string>}> $categories
-     */
     public function __construct(
         public readonly string $id,
         public readonly bool $isVisible,
         public readonly LocalizedString $name,
         public readonly LocalizedString $url,
-        public readonly ?LocalizedString $shortDescription = null,
+        public readonly ?string $imagePreview = null,
         public readonly ?LocalizedString $description = null,
         public readonly ?LocalizedString $seoTitle = null,
         public readonly ?LocalizedString $seoDescription = null,
         public readonly ?Content $content = null,
         public readonly ?SiteLink $siteLink = null,
         public readonly ?RichSnippet $richSnippet = null,
-        public readonly array $images = [],
-        public readonly array $categoriesIds = [],
-        public readonly array $parametersIds = [],
-        public readonly ?string $brandId = self::BRAND_ID_UNSET,
         public readonly ?string $guid = null,
         public readonly ?bool $isLoaded = null,
-        public readonly array $categories = [],
         public readonly ?\DateTimeInterface $createdAt = null,
         public readonly ?\DateTimeInterface $updatedAt = null,
     ) {
@@ -79,8 +56,8 @@ final class Product
             'url' => $this->url->toArray(),
         ];
 
-        if ($this->shortDescription !== null) {
-            $data['short_description'] = $this->shortDescription->toArray();
+        if ($this->imagePreview !== null) {
+            $data['image_preview'] = $this->imagePreview;
         }
 
         if ($this->description !== null) {
@@ -95,22 +72,6 @@ final class Product
             $data['seo_description'] = $this->seoDescription->toArray();
         }
 
-        if ($this->images !== []) {
-            $data['images'] = $this->images;
-        }
-
-        if ($this->categoriesIds !== []) {
-            $data['categories_ids'] = $this->categoriesIds;
-        }
-
-        if ($this->parametersIds !== []) {
-            $data['parameters_ids'] = $this->parametersIds;
-        }
-
-        if ($this->brandId !== self::BRAND_ID_UNSET) {
-            $data['brand_id'] = $this->brandId;
-        }
-
         return $data;
     }
 
@@ -119,26 +80,21 @@ final class Product
      */
     public static function fromArray(array $data): self
     {
-        /** @var ProductData $data */
+        /** @var BrandData $data */
         return new self(
             id: $data['id'],
             isVisible: $data['is_visible'],
             name: LocalizedString::fromArray($data['name']),
             url: LocalizedString::fromArray($data['url']),
-            shortDescription: isset($data['short_description']) ? LocalizedString::fromArray($data['short_description']) : null,
+            imagePreview: $data['image_preview'] ?? null,
             description: isset($data['description']) ? LocalizedString::fromArray($data['description']) : null,
             seoTitle: isset($data['seo_title']) ? LocalizedString::fromArray($data['seo_title']) : null,
             seoDescription: isset($data['seo_description']) ? LocalizedString::fromArray($data['seo_description']) : null,
             content: isset($data['content']) ? Content::fromArray($data['content']) : null,
             siteLink: isset($data['site_link']) ? SiteLink::fromArray($data['site_link']) : null,
             richSnippet: isset($data['rich_snippet']) ? RichSnippet::fromArray($data['rich_snippet']) : null,
-            images: $data['images'] ?? [],
-            categoriesIds: $data['categories_ids'] ?? [],
-            parametersIds: $data['parameters_ids'] ?? [],
-            brandId: array_key_exists('brand_id', $data) ? $data['brand_id'] : self::BRAND_ID_UNSET,
             guid: $data['guid'] ?? null,
             isLoaded: $data['is_loaded'] ?? null,
-            categories: $data['categories'] ?? [],
             createdAt: isset($data['created_at']) ? new \DateTimeImmutable($data['created_at']) : null,
             updatedAt: isset($data['updated_at']) ? new \DateTimeImmutable($data['updated_at']) : null,
         );

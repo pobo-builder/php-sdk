@@ -45,8 +45,9 @@ $client = new PoboClient(
 ```
 1. Parameters (no dependencies)
 2. Categories (no dependencies)
-3. Products (depends on categories and parameters)
-4. Blogs (no dependencies)
+3. Brands (no dependencies)
+4. Products (depends on categories, parameters, and brands)
+5. Blogs (no dependencies)
 ```
 
 ### Multilang Validation Rules
@@ -128,6 +129,35 @@ $result = $client->importCategories($categories);
 echo sprintf('Imported: %d, Updated: %d', $result->imported, $result->updated);
 ```
 
+### Import Brands
+
+```php
+use Pobo\Sdk\DTO\Brand;
+use Pobo\Sdk\DTO\LocalizedString;
+use Pobo\Sdk\Enum\Language;
+
+$brands = [
+    new Brand(
+        id: 'BRAND-001',
+        isVisible: true,
+        name: LocalizedString::create('Apple')
+            ->withTranslation(Language::CS, 'Apple')
+            ->withTranslation(Language::SK, 'Apple'),
+        url: LocalizedString::create('https://example.com/brands/apple')
+            ->withTranslation(Language::CS, 'https://example.com/cs/znacky/apple')
+            ->withTranslation(Language::SK, 'https://example.com/sk/znacky/apple'),
+        imagePreview: 'https://example.com/brands/apple-logo.png',
+        description: LocalizedString::create('<p>Apple Inc.</p>')
+            ->withTranslation(Language::CS, '<p>Apple Inc.</p>'),
+    ),
+];
+
+$result = $client->importBrands($brands);
+echo sprintf('Imported: %d, Updated: %d', $result->imported, $result->updated);
+```
+
+> **Brand → Product pairing:** brands stand on their own. To pair a product with a brand, set the `brandId` argument on the `Product` DTO (see "Import Products" below). Brands must be imported **before** the products that reference them.
+
 ### Import Products
 
 ```php
@@ -177,6 +207,46 @@ if ($result->hasErrors() === true) {
     }
 }
 ```
+
+#### Pairing a product with a brand
+
+The `brandId` argument on `Product` follows three-state semantics matching the API:
+
+| Value of `brandId`             | Behavior                                                                  |
+|--------------------------------|---------------------------------------------------------------------------|
+| **omitted** (default)          | `brand_id` is **not sent** — the server keeps the existing assignment.    |
+| `null`                         | `brand_id: null` is sent — the brand is **cleared** on the product.       |
+| `'BRAND-001'` (string)         | `brand_id: "BRAND-001"` is sent — paired with `brand.remote_id` in Pobo.  |
+
+```php
+// Set a brand
+$product = new Product(
+    id: 'PROD-001',
+    isVisible: true,
+    name: LocalizedString::create('iPhone 15'),
+    url: LocalizedString::create('https://example.com/iphone-15'),
+    brandId: 'BRAND-001',
+);
+
+// Clear an existing brand assignment
+$product = new Product(
+    id: 'PROD-001',
+    isVisible: true,
+    name: LocalizedString::create('iPhone 15'),
+    url: LocalizedString::create('https://example.com/iphone-15'),
+    brandId: null,
+);
+
+// Leave the brand untouched (the default — do not pass brandId)
+$product = new Product(
+    id: 'PROD-001',
+    isVisible: true,
+    name: LocalizedString::create('iPhone 15'),
+    url: LocalizedString::create('https://example.com/iphone-15'),
+);
+```
+
+> **Note:** the brand referenced by `brandId` must already exist in Pobo (registered via `importBrands`). Otherwise the product is skipped with `"Invalid brand id: ..."`.
 
 ### Import Blogs
 
@@ -241,6 +311,15 @@ $result = $client->deleteCategories(['CAT-001', 'CAT-002']);
 echo sprintf('Deleted: %d', $result->deleted);
 ```
 
+### Delete Brands
+
+```php
+$result = $client->deleteBrands(['BRAND-001', 'BRAND-002']);
+echo sprintf('Deleted: %d', $result->deleted);
+```
+
+> **Note:** soft-deleting a brand does **not** clear `brand_id` on the products that reference it. Re-import the products with `brandId: null` if you also want to drop the assignment.
+
 ### Delete Blogs
 
 ```php
@@ -301,6 +380,21 @@ foreach ($client->iterateCategories() as $category) {
 }
 ```
 
+### Export Brands
+
+```php
+$response = $client->getBrands();
+
+foreach ($response->data as $brand) {
+    echo sprintf("%s: %s (logo: %s)\n", $brand->id, $brand->name->getDefault(), $brand->imagePreview ?? 'none');
+}
+
+// Iterate through all brands
+foreach ($client->iterateBrands() as $brand) {
+    processBrand($brand);
+}
+```
+
 ### Export Blogs
 
 ```php
@@ -335,8 +429,9 @@ foreach ($client->iterateProducts(lang: [Language::ALL]) as $product) {
     echo $product->content?->getHtml(Language::CS);
 }
 
-// Same for categories and blogs
+// Same for categories, brands and blogs
 $response = $client->getCategories(lang: [Language::DEFAULT, Language::CS]);
+$response = $client->getBrands(lang: [Language::ALL]);
 $response = $client->getBlogs(lang: [Language::ALL]);
 ```
 
@@ -346,12 +441,12 @@ $response = $client->getBlogs(lang: [Language::ALL]);
 
 By default, only `content.html` is returned. Use the `include` parameter to request additional content:
 
-| Value          | Description                                       | Available for            |
-|----------------|---------------------------------------------------|--------------------------|
-| `marketplace`  | HTML content for marketplace (no custom CSS)      | product, category, blog  |
-| `nested`       | Raw widget JSON from widget tables                | product, category, blog  |
-| `site_link`    | Anchor navigation on H2 headings                  | product, blog            |
-| `rich_snippet` | JSON-LD structured data (FAQPage)                 | product, category, blog  |
+| Value          | Description                                       | Available for                   |
+|----------------|---------------------------------------------------|---------------------------------|
+| `marketplace`  | HTML content for marketplace (no custom CSS)      | product, category, brand, blog  |
+| `nested`       | Raw widget JSON from widget tables                | product, category, brand, blog  |
+| `site_link`    | Anchor navigation on H2 headings                  | product, brand, blog            |
+| `rich_snippet` | JSON-LD structured data (FAQPage)                 | product, category, brand, blog  |
 
 ```php
 use Pobo\Sdk\Enum\IncludeContent;
@@ -386,6 +481,14 @@ foreach ($client->iterateCategories(include: [IncludeContent::NESTED]) as $categ
     }
 }
 
+// Same for brands
+foreach ($client->iterateBrands(include: [IncludeContent::MARKETPLACE]) as $brand) {
+    if ($brand->content !== null) {
+        echo $brand->content->getHtml(Language::CS);
+        echo $brand->content->getMarketplace(Language::CS);
+    }
+}
+
 // Same for blogs
 foreach ($client->iterateBlogs(include: [IncludeContent::MARKETPLACE]) as $blog) {
     if ($blog->content !== null) {
@@ -397,7 +500,7 @@ foreach ($client->iterateBlogs(include: [IncludeContent::MARKETPLACE]) as $blog)
 
 ## Site Links
 
-Anchor navigation generated from H2 headings in content widgets. Available for products and blogs.
+Anchor navigation generated from H2 headings in content widgets. Available for products, brands, and blogs.
 
 > **E-shop config required:** Site links are returned only if `enable_site_link` is enabled on the e-shop in Pobo administration. Without that flag the `site_link` field will be empty even when `IncludeContent::SITE_LINK` is requested.
 
@@ -421,7 +524,7 @@ foreach ($client->iterateProducts(include: [IncludeContent::SITE_LINK], lang: [L
 
 ## Rich Snippets
 
-JSON-LD structured data (FAQPage schema) generated from FAQ widgets. Available for products, categories, and blogs.
+JSON-LD structured data (FAQPage schema) generated from FAQ widgets. Available for products, categories, brands, and blogs.
 
 > **E-shop config required:** Rich snippets are returned only if `enable_rich_snippet` is enabled on the e-shop in Pobo administration. Without that flag the `rich_snippet` field will be empty even when `IncludeContent::RICH_SNIPPET` is requested.
 
@@ -444,6 +547,16 @@ foreach ($client->iterateProducts(include: [IncludeContent::RICH_SNIPPET], lang:
 foreach ($client->iterateCategories(include: [IncludeContent::RICH_SNIPPET]) as $category) {
     if ($category->richSnippet !== null) {
         echo $category->richSnippet->getHtml(Language::DEFAULT);
+    }
+}
+
+// Brands support both site_link and rich_snippet
+foreach ($client->iterateBrands(include: [IncludeContent::RICH_SNIPPET, IncludeContent::SITE_LINK]) as $brand) {
+    if ($brand->richSnippet !== null) {
+        echo $brand->richSnippet->getHtml(Language::DEFAULT);
+    }
+    if ($brand->siteLink !== null) {
+        echo $brand->siteLink->getHtml(Language::DEFAULT);
     }
 }
 ```
@@ -581,16 +694,20 @@ $name->toArray();            // ['default' => '...', 'cs' => '...', ...]
 |-----------------------------------------------------------------------------------------------------------------------|----------------------------------|
 | `importProducts(array $products)`                                                                                     | Bulk import products (max 100)   |
 | `importCategories(array $categories)`                                                                                 | Bulk import categories (max 100) |
+| `importBrands(array $brands)`                                                                                         | Bulk import brands (max 100)     |
 | `importParameters(array $parameters)`                                                                                 | Bulk import parameters (max 100) |
 | `importBlogs(array $blogs)`                                                                                           | Bulk import blogs (max 100)      |
 | `deleteProducts(array $ids)`                                                                                          | Bulk delete products (max 100)   |
 | `deleteCategories(array $ids)`                                                                                        | Bulk delete categories (max 100) |
+| `deleteBrands(array $ids)`                                                                                            | Bulk delete brands (max 100)     |
 | `deleteBlogs(array $ids)`                                                                                             | Bulk delete blogs (max 100)      |
 | `getProducts(?int $page, ?int $perPage, ?DateTime $lastUpdateFrom, ?bool $isEdited, ?array $include, ?array $lang)`   | Get products page                |
 | `getCategories(?int $page, ?int $perPage, ?DateTime $lastUpdateFrom, ?bool $isEdited, ?array $include, ?array $lang)` | Get categories page              |
+| `getBrands(?int $page, ?int $perPage, ?DateTime $lastUpdateFrom, ?bool $isEdited, ?array $include, ?array $lang)`     | Get brands page                  |
 | `getBlogs(?int $page, ?int $perPage, ?DateTime $lastUpdateFrom, ?bool $isEdited, ?array $include, ?array $lang)`      | Get blogs page                   |
 | `iterateProducts(?DateTime $lastUpdateFrom, ?bool $isEdited, ?array $include, ?array $lang)`                          | Iterate all products             |
 | `iterateCategories(?DateTime $lastUpdateFrom, ?bool $isEdited, ?array $include, ?array $lang)`                        | Iterate all categories           |
+| `iterateBrands(?DateTime $lastUpdateFrom, ?bool $isEdited, ?array $include, ?array $lang)`                            | Iterate all brands               |
 | `iterateBlogs(?DateTime $lastUpdateFrom, ?bool $isEdited, ?array $include, ?array $lang)`                             | Iterate all blogs                |
 
 ## Limits
