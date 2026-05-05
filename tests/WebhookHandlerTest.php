@@ -158,4 +158,90 @@ final class WebhookHandlerTest extends TestCase
 
         $this->assertInstanceOf(\DateTimeInterface::class, $result->timestamp);
     }
+
+    /**
+     * @return array<string, array{0: string, 1: WebhookEvent}>
+     */
+    public static function brandEventProvider(): array
+    {
+        return [
+            'Brands.create' => ['Brands.create', WebhookEvent::BRANDS_CREATE],
+            'Brands.update' => ['Brands.update', WebhookEvent::BRANDS_UPDATE],
+            'Brands.delete' => ['Brands.delete', WebhookEvent::BRANDS_DELETE],
+        ];
+    }
+
+    /**
+     * @dataProvider brandEventProvider
+     */
+    public function testHandleValidBrandEvent(string $eventValue, WebhookEvent $expected): void
+    {
+        $payload = json_encode([
+            'event' => $eventValue,
+            'timestamp' => '2026-05-05T14:30:00+02:00',
+            'eshop_id' => 789,
+        ]);
+
+        $signature = hash_hmac('sha256', $payload, self::WEBHOOK_SECRET);
+
+        $result = $this->handler->handle($payload, $signature);
+
+        $this->assertSame($expected, $result->event);
+        $this->assertSame(789, $result->eshopId);
+    }
+
+    /**
+     * @return array<string, array{0: string, 1: WebhookEvent}>
+     */
+    public static function createDeleteEventProvider(): array
+    {
+        return [
+            'Products.create' => ['Products.create', WebhookEvent::PRODUCTS_CREATE],
+            'Products.delete' => ['Products.delete', WebhookEvent::PRODUCTS_DELETE],
+            'Categories.create' => ['Categories.create', WebhookEvent::CATEGORIES_CREATE],
+            'Categories.delete' => ['Categories.delete', WebhookEvent::CATEGORIES_DELETE],
+            'Blogs.create' => ['Blogs.create', WebhookEvent::BLOGS_CREATE],
+            'Blogs.delete' => ['Blogs.delete', WebhookEvent::BLOGS_DELETE],
+        ];
+    }
+
+    /**
+     * @dataProvider createDeleteEventProvider
+     */
+    public function testHandleValidCreateOrDeleteEvent(string $eventValue, WebhookEvent $expected): void
+    {
+        $payload = json_encode([
+            'event' => $eventValue,
+            'timestamp' => '2026-05-05T14:30:00+02:00',
+            'eshop_id' => 555,
+        ]);
+
+        $signature = hash_hmac('sha256', $payload, self::WEBHOOK_SECRET);
+
+        $result = $this->handler->handle($payload, $signature);
+
+        $this->assertSame($expected, $result->event);
+    }
+
+    public function testHandleBrandsCreateMatchableInUserCode(): void
+    {
+        // Verifies the typical match() pattern works for brand events.
+        $payload = json_encode([
+            'event' => 'Brands.create',
+            'timestamp' => '2026-05-05T14:30:00+02:00',
+            'eshop_id' => 1,
+        ]);
+
+        $signature = hash_hmac('sha256', $payload, self::WEBHOOK_SECRET);
+        $result = $this->handler->handle($payload, $signature);
+
+        $branch = match ($result->event) {
+            WebhookEvent::BRANDS_CREATE => 'created',
+            WebhookEvent::BRANDS_UPDATE => 'updated',
+            WebhookEvent::BRANDS_DELETE => 'deleted',
+            default => 'other',
+        };
+
+        $this->assertSame('created', $branch);
+    }
 }

@@ -329,13 +329,30 @@ foreach ($client->iterateProducts(lang: [Language::ALL]) as $product) {
 
 Pobo can notify your application when content changes in the administration. Register a webhook URL in the Pobo e-shop settings; Pobo POSTs to it with HMAC-SHA256 signed requests.
 
-| Event                | Constant                          | Fired when                             |
-|----------------------|-----------------------------------|----------------------------------------|
-| `Products.update`    | `WebhookEvent::PRODUCTS_UPDATE`   | a product was edited and saved in Pobo |
-| `Categories.update`  | `WebhookEvent::CATEGORIES_UPDATE` | a category was edited                  |
-| `Blogs.update`       | `WebhookEvent::BLOGS_UPDATE`      | a blog was edited                      |
+### Supported events
+
+| Event                  | Constant                            | Fired when                          |
+|------------------------|-------------------------------------|-------------------------------------|
+| `Products.create`      | `WebhookEvent::PRODUCTS_CREATE`     | a product was created               |
+| `Products.update`      | `WebhookEvent::PRODUCTS_UPDATE`     | a product was edited                |
+| `Products.delete`      | `WebhookEvent::PRODUCTS_DELETE`     | a product was soft-deleted          |
+| `Categories.create`    | `WebhookEvent::CATEGORIES_CREATE`   | a category was created              |
+| `Categories.update`    | `WebhookEvent::CATEGORIES_UPDATE`   | a category was edited               |
+| `Categories.delete`    | `WebhookEvent::CATEGORIES_DELETE`   | a category was soft-deleted         |
+| `Brands.create`        | `WebhookEvent::BRANDS_CREATE`       | a brand was created                 |
+| `Brands.update`        | `WebhookEvent::BRANDS_UPDATE`       | a brand was edited                  |
+| `Brands.delete`        | `WebhookEvent::BRANDS_DELETE`       | a brand was soft-deleted            |
+| `Blogs.create`         | `WebhookEvent::BLOGS_CREATE`        | a blog was created                  |
+| `Blogs.update`         | `WebhookEvent::BLOGS_UPDATE`        | a blog was edited                   |
+| `Blogs.delete`         | `WebhookEvent::BLOGS_DELETE`        | a blog was soft-deleted             |
+
+The enum exposes `isCreate()` / `isUpdate()` / `isDelete()` helpers if you only need to branch on the lifecycle action regardless of entity type.
+
+> **Note:** the API also defines `Languages.create/update/delete` events. The SDK does not expose them yet — payloads carrying these events will throw `WebhookException::unknownEvent()`.
 
 The webhook is a notification only — it does not carry the changed entities. Use it as a trigger to re-sync via the export endpoints (typically combined with `lastUpdateFrom`).
+
+### Basic usage
 
 ```php
 use Pobo\Sdk\WebhookHandler;
@@ -348,9 +365,18 @@ try {
     $payload = $handler->handleFromGlobals();
 
     match ($payload->event) {
-        WebhookEvent::PRODUCTS_UPDATE   => syncProducts($client),
-        WebhookEvent::CATEGORIES_UPDATE => syncCategories($client),
-        WebhookEvent::BLOGS_UPDATE      => syncBlogs($client),
+        WebhookEvent::PRODUCTS_CREATE,
+        WebhookEvent::PRODUCTS_UPDATE,
+        WebhookEvent::PRODUCTS_DELETE   => syncProducts($client),
+        WebhookEvent::CATEGORIES_CREATE,
+        WebhookEvent::CATEGORIES_UPDATE,
+        WebhookEvent::CATEGORIES_DELETE => syncCategories($client),
+        WebhookEvent::BRANDS_CREATE,
+        WebhookEvent::BRANDS_UPDATE,
+        WebhookEvent::BRANDS_DELETE     => syncBrands($client),
+        WebhookEvent::BLOGS_CREATE,
+        WebhookEvent::BLOGS_UPDATE,
+        WebhookEvent::BLOGS_DELETE      => syncBlogs($client),
     };
 
     http_response_code(200);
@@ -361,6 +387,20 @@ try {
 ```
 
 `$payload` exposes `event` (`WebhookEvent` enum), `timestamp` (`DateTimeInterface`), and `eshopId` (int).
+
+### Branching only on lifecycle action
+
+```php
+$payload = $handler->handleFromGlobals();
+
+if ($payload->event->isDelete()) {
+    invalidateCache($payload->event, $payload->eshopId);
+}
+
+if ($payload->event->isCreate() || $payload->event->isUpdate()) {
+    triggerResync($payload->event, $payload->eshopId);
+}
+```
 
 ## Error Handling
 
