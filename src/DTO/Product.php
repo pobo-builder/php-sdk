@@ -37,10 +37,16 @@ final class Product
      */
     public const BRAND_ID_UNSET = "\x00POBO_BRAND_ID_UNSET\x00";
 
+    /** @var array<string> */
+    public readonly array $categoriesIds;
+
+    /** @var array<int> */
+    public readonly array $parametersIds;
+
     /**
      * @param array<string> $images
-     * @param array<string> $categoriesIds
-     * @param array<int> $parametersIds
+     * @param array<string|int|null> $categoriesIds Empty strings and nulls are filtered defensively
+     * @param array<int|string|null> $parametersIds Empty strings and nulls are filtered defensively
      * @param array<array{id: string, name: array<string, string>}> $categories
      */
     public function __construct(
@@ -56,8 +62,8 @@ final class Product
         public readonly ?SiteLink $siteLink = null,
         public readonly ?RichSnippet $richSnippet = null,
         public readonly array $images = [],
-        public readonly array $categoriesIds = [],
-        public readonly array $parametersIds = [],
+        array $categoriesIds = [],
+        array $parametersIds = [],
         public readonly ?string $brandId = self::BRAND_ID_UNSET,
         public readonly ?string $guid = null,
         public readonly ?bool $isLoaded = null,
@@ -65,6 +71,20 @@ final class Product
         public readonly ?\DateTimeInterface $createdAt = null,
         public readonly ?\DateTimeInterface $updatedAt = null,
     ) {
+        $this->categoriesIds = array_values(array_map(
+            static fn(mixed $value): string => (string) $value,
+            array_filter(
+                $categoriesIds,
+                static fn(mixed $value): bool => $value !== '' && $value !== null,
+            ),
+        ));
+        $this->parametersIds = array_values(array_map(
+            static fn(mixed $value): int => (int) $value,
+            array_filter(
+                $parametersIds,
+                static fn(mixed $value): bool => $value !== '' && $value !== null,
+            ),
+        ));
     }
 
     /**

@@ -128,6 +128,77 @@ final class BrandLifecycleTest extends IntegrationTestCase
         self::assertNull($reread->brandId, 'Sending brand_id: null should clear the product brand assignment.');
     }
 
+    public function testReimportBrandWithoutImagePreviewKeepsExistingLogo(): void
+    {
+        $brandId = $this->uniqueId('brand');
+        $this->trackBrand($brandId);
+
+        $logoUrl = 'https://example.com/brands/sdk-omit-test-logo.png';
+
+        $original = new Brand(
+            id: $brandId,
+            isVisible: true,
+            name: LocalizedString::create('SDK Omit Test')
+                ->withTranslation(Language::CS, 'SDK Omit Test CZ'),
+            url: LocalizedString::create(sprintf('https://example.com/znacky/%s', $brandId))
+                ->withTranslation(Language::CS, sprintf('https://example.com/cs/znacky/%s', $brandId)),
+            imagePreview: $logoUrl,
+        );
+
+        $first = $this->client->importBrands([$original]);
+        self::assertFalse($first->hasErrors(), sprintf('Brand import failed: %s', json_encode($first->errors)));
+
+        // Re-import without imagePreview (default sentinel) → server must keep the logo.
+        $reimport = new Brand(
+            id: $brandId,
+            isVisible: true,
+            name: LocalizedString::create('SDK Omit Test renamed')
+                ->withTranslation(Language::CS, 'SDK Omit Test CZ renamed'),
+            url: LocalizedString::create(sprintf('https://example.com/znacky/%s', $brandId))
+                ->withTranslation(Language::CS, sprintf('https://example.com/cs/znacky/%s', $brandId)),
+        );
+
+        $second = $this->client->importBrands([$reimport]);
+        self::assertFalse($second->hasErrors(), sprintf('Brand re-import failed: %s', json_encode($second->errors)));
+
+        $found = null;
+        foreach ($this->client->iterateBrands(isEdited: false, lang: [Language::ALL]) as $candidate) {
+            if ($candidate->id === $brandId) {
+                $found = $candidate;
+                break;
+            }
+        }
+
+        self::assertNotNull($found);
+        self::assertSame($logoUrl, $found->imagePreview, 'Omitting imagePreview must preserve the existing logo, not clear it.');
+        self::assertSame('SDK Omit Test renamed', $found->name->getDefault(), 'Other fields should still update.');
+
+        // Now explicitly clear the logo.
+        $clear = new Brand(
+            id: $brandId,
+            isVisible: true,
+            name: LocalizedString::create('SDK Omit Test renamed')
+                ->withTranslation(Language::CS, 'SDK Omit Test CZ renamed'),
+            url: LocalizedString::create(sprintf('https://example.com/znacky/%s', $brandId))
+                ->withTranslation(Language::CS, sprintf('https://example.com/cs/znacky/%s', $brandId)),
+            imagePreview: null,
+        );
+
+        $third = $this->client->importBrands([$clear]);
+        self::assertFalse($third->hasErrors(), sprintf('Brand clear-logo import failed: %s', json_encode($third->errors)));
+
+        $reread = null;
+        foreach ($this->client->iterateBrands(isEdited: false, lang: [Language::ALL]) as $candidate) {
+            if ($candidate->id === $brandId) {
+                $reread = $candidate;
+                break;
+            }
+        }
+
+        self::assertNotNull($reread);
+        self::assertNull($reread->imagePreview, 'Sending imagePreview: null should clear the logo.');
+    }
+
     public function testImportProductWithInvalidBrandIdReportsError(): void
     {
         $productId = $this->uniqueId('prod');

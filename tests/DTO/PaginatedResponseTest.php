@@ -5,8 +5,9 @@ declare(strict_types=1);
 namespace Pobo\Sdk\Tests\DTO;
 
 use PHPUnit\Framework\TestCase;
-use Pobo\Sdk\DTO\Category;
 use Pobo\Sdk\DTO\Blog;
+use Pobo\Sdk\DTO\Brand;
+use Pobo\Sdk\DTO\Category;
 use Pobo\Sdk\DTO\PaginatedResponse;
 use Pobo\Sdk\DTO\Product;
 
@@ -195,6 +196,48 @@ final class PaginatedResponseTest extends TestCase
         $this->assertInstanceOf(Category::class, $response->data[0]);
         $this->assertNotNull($response->data[0]->content);
         $this->assertCount(1, $response->data[0]->content->nested);
+    }
+
+    public function testFromArrayWithBrandEntity(): void
+    {
+        $data = [
+            'data' => [
+                [
+                    'id' => 'BRAND-001',
+                    'is_visible' => true,
+                    'name' => ['default' => 'Apple'],
+                    'url' => ['default' => 'https://example.com/znacky/apple'],
+                    'image_preview' => 'https://example.com/brands/apple-logo.png',
+                    'content' => [
+                        'html' => ['default' => '<div>Brand HTML</div>'],
+                    ],
+                ],
+                [
+                    'id' => 'BRAND-002',
+                    'is_visible' => false,
+                    'name' => ['default' => 'No-logo brand'],
+                    'url' => ['default' => 'https://example.com/znacky/no-logo'],
+                    'image_preview' => null,
+                ],
+            ],
+            'meta' => [
+                'current_page' => 2,
+                'per_page' => 50,
+                'total' => 12,
+            ],
+        ];
+
+        $response = PaginatedResponse::fromArray($data, Brand::class);
+
+        $this->assertCount(2, $response->data);
+        $this->assertInstanceOf(Brand::class, $response->data[0]);
+        $this->assertInstanceOf(Brand::class, $response->data[1]);
+        $this->assertSame('BRAND-001', $response->data[0]->id);
+        $this->assertSame('https://example.com/brands/apple-logo.png', $response->data[0]->imagePreview);
+        $this->assertNull($response->data[1]->imagePreview);
+        $this->assertSame(2, $response->currentPage);
+        $this->assertSame(50, $response->perPage);
+        $this->assertSame(12, $response->total);
     }
 
     public function testFromArrayWithBlogEntity(): void

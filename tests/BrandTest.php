@@ -69,7 +69,7 @@ final class BrandTest extends TestCase
         $this->assertNull($brand->imagePreview);
     }
 
-    public function testBrandFromArrayWithoutImagePreviewKey(): void
+    public function testBrandFromArrayWithoutImagePreviewKeyKeepsSentinel(): void
     {
         $data = [
             'id' => 'BRAND-003',
@@ -80,7 +80,72 @@ final class BrandTest extends TestCase
 
         $brand = Brand::fromArray($data);
 
-        $this->assertNull($brand->imagePreview);
+        $this->assertSame(Brand::IMAGE_PREVIEW_UNSET, $brand->imagePreview);
+        $this->assertArrayNotHasKey('image_preview', $brand->toArray());
+    }
+
+    public function testBrandToArrayIncludesImagePreviewNullToClear(): void
+    {
+        $brand = new Brand(
+            id: 'BRAND-CLEAR',
+            isVisible: true,
+            name: LocalizedString::create('Apple'),
+            url: LocalizedString::create('https://example.com/znacky/apple'),
+            imagePreview: null,
+        );
+
+        $array = $brand->toArray();
+
+        $this->assertArrayHasKey('image_preview', $array);
+        $this->assertNull($array['image_preview']);
+    }
+
+    public function testBrandToArrayOmitsImagePreviewWithExplicitSentinel(): void
+    {
+        $brand = new Brand(
+            id: 'BRAND-001',
+            isVisible: true,
+            name: LocalizedString::create('Apple'),
+            url: LocalizedString::create('https://example.com/znacky/apple'),
+            imagePreview: Brand::IMAGE_PREVIEW_UNSET,
+        );
+
+        $array = $brand->toArray();
+
+        $this->assertArrayNotHasKey('image_preview', $array);
+    }
+
+    public function testBrandFromArrayThenToArrayRoundtripsImagePreview(): void
+    {
+        $data = [
+            'id' => 'BRAND-RT',
+            'is_visible' => true,
+            'name' => ['default' => 'Brand'],
+            'url' => ['default' => 'https://example.com'],
+            'image_preview' => 'https://example.com/logo.png',
+        ];
+
+        $array = Brand::fromArray($data)->toArray();
+
+        $this->assertSame('https://example.com/logo.png', $array['image_preview']);
+    }
+
+    public function testBrandFromArrayThenToArrayRoundtripsNullImagePreview(): void
+    {
+        $data = [
+            'id' => 'BRAND-NO-LOGO',
+            'is_visible' => true,
+            'name' => ['default' => 'Brand without logo'],
+            'url' => ['default' => 'https://example.com'],
+            'image_preview' => null,
+        ];
+
+        $array = Brand::fromArray($data)->toArray();
+
+        // Server returned null (no logo) → SDK round-trip preserves it explicitly
+        // (sending null again is a no-op since server state is already null)
+        $this->assertArrayHasKey('image_preview', $array);
+        $this->assertNull($array['image_preview']);
     }
 
     public function testBrandFromArrayWithoutContent(): void
@@ -131,7 +196,7 @@ final class BrandTest extends TestCase
         $this->assertSame('https://example.com/brands/apple-logo.png', $array['image_preview']);
     }
 
-    public function testBrandToArrayOmitsImagePreviewWhenNull(): void
+    public function testBrandToArrayOmitsImagePreviewWhenNotProvided(): void
     {
         $brand = new Brand(
             id: 'BRAND-001',

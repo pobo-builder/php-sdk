@@ -406,4 +406,49 @@ final class ProductTest extends TestCase
 
         $this->assertSame('BRAND-RT', $array['brand_id']);
     }
+
+    public function testProductCategoriesIdsFiltersEmptyStringsAndNulls(): void
+    {
+        $product = new Product(
+            id: 'PROD-001',
+            isVisible: true,
+            name: LocalizedString::create('Product'),
+            url: LocalizedString::create('https://example.com'),
+            categoriesIds: ['CAT-001', '', 'CAT-002', null, 'CAT-003'],
+        );
+
+        $this->assertSame(['CAT-001', 'CAT-002', 'CAT-003'], $product->categoriesIds);
+        $this->assertSame(['CAT-001', 'CAT-002', 'CAT-003'], $product->toArray()['categories_ids']);
+    }
+
+    public function testProductParametersIdsFiltersEmptyStringsAndNulls(): void
+    {
+        $product = new Product(
+            id: 'PROD-001',
+            isVisible: true,
+            name: LocalizedString::create('Product'),
+            url: LocalizedString::create('https://example.com'),
+            parametersIds: [1, '', 2, null, 3],
+        );
+
+        $this->assertSame([1, 2, 3], $product->parametersIds);
+        $this->assertSame([1, 2, 3], $product->toArray()['parameters_ids']);
+    }
+
+    public function testProductCategoriesIdsAllEmptyDoesNotEmitKey(): void
+    {
+        $product = new Product(
+            id: 'PROD-001',
+            isVisible: true,
+            name: LocalizedString::create('Product'),
+            url: LocalizedString::create('https://example.com'),
+            categoriesIds: ['', null, ''],
+            parametersIds: ['', null],
+        );
+
+        $array = $product->toArray();
+
+        $this->assertArrayNotHasKey('categories_ids', $array);
+        $this->assertArrayNotHasKey('parameters_ids', $array);
+    }
 }

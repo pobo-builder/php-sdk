@@ -25,12 +25,19 @@ namespace Pobo\Sdk\DTO;
  */
 final class Brand
 {
+    /**
+     * Sentinel meaning "do not send image_preview in the import payload" — the
+     * server will leave brand.image_preview unchanged. Distinct from passing
+     * null, which explicitly clears the logo in the DB.
+     */
+    public const IMAGE_PREVIEW_UNSET = "\x00POBO_IMAGE_PREVIEW_UNSET\x00";
+
     public function __construct(
         public readonly string $id,
         public readonly bool $isVisible,
         public readonly LocalizedString $name,
         public readonly LocalizedString $url,
-        public readonly ?string $imagePreview = null,
+        public readonly ?string $imagePreview = self::IMAGE_PREVIEW_UNSET,
         public readonly ?LocalizedString $description = null,
         public readonly ?LocalizedString $seoTitle = null,
         public readonly ?LocalizedString $seoDescription = null,
@@ -56,7 +63,7 @@ final class Brand
             'url' => $this->url->toArray(),
         ];
 
-        if ($this->imagePreview !== null) {
+        if ($this->imagePreview !== self::IMAGE_PREVIEW_UNSET) {
             $data['image_preview'] = $this->imagePreview;
         }
 
@@ -86,7 +93,7 @@ final class Brand
             isVisible: $data['is_visible'],
             name: LocalizedString::fromArray($data['name']),
             url: LocalizedString::fromArray($data['url']),
-            imagePreview: $data['image_preview'] ?? null,
+            imagePreview: array_key_exists('image_preview', $data) ? $data['image_preview'] : self::IMAGE_PREVIEW_UNSET,
             description: isset($data['description']) ? LocalizedString::fromArray($data['description']) : null,
             seoTitle: isset($data['seo_title']) ? LocalizedString::fromArray($data['seo_title']) : null,
             seoDescription: isset($data['seo_description']) ? LocalizedString::fromArray($data['seo_description']) : null,

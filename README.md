@@ -80,6 +80,14 @@ $result = $client->importBrands([
 ]);
 ```
 
+`imagePreview` follows the same three-state semantics as `Product::brandId`:
+
+| Value of `imagePreview`             | Behavior                                                          |
+|-------------------------------------|-------------------------------------------------------------------|
+| omitted (default)                   | `image_preview` is not sent — the server keeps the existing logo  |
+| `null`                              | `image_preview` is **cleared** on the brand                       |
+| `'https://.../logo.png'` (string)   | `image_preview` is set to this value                              |
+
 ### Products
 
 ```php
@@ -116,6 +124,10 @@ if ($result->hasErrors()) {
 | `'BRAND-001'` (string) | paired with `brand.remote_id` in Pobo                             |
 
 The brand referenced by `brandId` must already exist in Pobo (registered via `importBrands`); otherwise the product is skipped with `"Invalid brand id: ..."`.
+
+> **Empty string `brandId: ''`:** the API treats `""` as a lookup, not a clear — the product is skipped with `"Invalid brand id: "`. To clear an existing brand pairing, pass an explicit `null`. The same applies to entries inside `categoriesIds` / `parametersIds` — the SDK defensively filters empty strings and `null` from those arrays before sending.
+
+> **Known V2 limitation — clearing categories or parameters:** sending `categoriesIds: []` (or `parametersIds: []`) **does not** detach existing pivot rows; the server treats an empty/absent array as "no change". V2 currently has no clear-all endpoint for these relations — clearing has to happen via the Pobo admin UI. The 3-state semantic only applies to `brandId`.
 
 ### Blogs
 

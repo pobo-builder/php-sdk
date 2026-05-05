@@ -50,7 +50,7 @@ final class BrandTest extends TestCase
         $this->assertSame(['default' => 'Best Apple products'], $array['seo_description']);
     }
 
-    public function testToArrayOmitsImagePreviewWhenNull(): void
+    public function testToArrayIncludesImagePreviewNullToClearLogo(): void
     {
         $brand = new Brand(
             id: 'BRAND-001',
@@ -58,6 +58,21 @@ final class BrandTest extends TestCase
             name: LocalizedString::create('Apple'),
             url: LocalizedString::create('https://example.com/znacky/apple'),
             imagePreview: null,
+        );
+
+        $array = $brand->toArray();
+
+        $this->assertArrayHasKey('image_preview', $array);
+        $this->assertNull($array['image_preview']);
+    }
+
+    public function testToArrayOmitsImagePreviewWhenNotProvided(): void
+    {
+        $brand = new Brand(
+            id: 'BRAND-001',
+            isVisible: true,
+            name: LocalizedString::create('Apple'),
+            url: LocalizedString::create('https://example.com/znacky/apple'),
         );
 
         $array = $brand->toArray();
@@ -103,7 +118,7 @@ final class BrandTest extends TestCase
 
         $this->assertSame('BRAND-001', $brand->id);
         $this->assertFalse($brand->isVisible);
-        $this->assertNull($brand->imagePreview);
+        $this->assertSame(Brand::IMAGE_PREVIEW_UNSET, $brand->imagePreview);
         $this->assertNull($brand->description);
         $this->assertNull($brand->guid);
     }
