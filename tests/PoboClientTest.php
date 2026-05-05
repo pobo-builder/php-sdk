@@ -6,6 +6,7 @@ namespace Pobo\Sdk\Tests;
 
 use PHPUnit\Framework\TestCase;
 use Pobo\Sdk\DTO\Blog;
+use Pobo\Sdk\DTO\Brand;
 use Pobo\Sdk\DTO\Category;
 use Pobo\Sdk\DTO\DeleteResult;
 use Pobo\Sdk\DTO\LocalizedString;
@@ -311,6 +312,70 @@ final class PoboClientTest extends TestCase
         $this->expectExceptionMessage('Too many items: 101 provided, maximum is 100');
 
         $this->client->deleteBlogs($ids);
+    }
+
+    public function testImportBrandsThrowsExceptionForEmptyArray(): void
+    {
+        $this->expectException(ValidationException::class);
+        $this->expectExceptionMessage('Payload cannot be empty');
+
+        $this->client->importBrands([]);
+    }
+
+    public function testImportBrandsThrowsExceptionForTooManyItems(): void
+    {
+        $brands = [];
+        for ($i = 0; $i < 101; $i++) {
+            $brands[] = [
+                'id' => sprintf('BRAND-%03d', $i),
+                'is_visible' => true,
+                'name' => ['default' => sprintf('Brand %d', $i)],
+                'url' => ['default' => sprintf('https://example.com/brand/%d', $i)],
+            ];
+        }
+
+        $this->expectException(ValidationException::class);
+        $this->expectExceptionMessage('Too many items: 101 provided, maximum is 100');
+
+        $this->client->importBrands($brands);
+    }
+
+    public function testBrandDtoIsConvertedToArray(): void
+    {
+        $brand = new Brand(
+            id: 'BRAND-001',
+            isVisible: true,
+            name: LocalizedString::create('Apple'),
+            url: LocalizedString::create('https://example.com/znacky/apple'),
+            imagePreview: 'https://example.com/brands/apple-logo.png',
+        );
+
+        $array = $brand->toArray();
+
+        $this->assertSame('BRAND-001', $array['id']);
+        $this->assertSame('https://example.com/brands/apple-logo.png', $array['image_preview']);
+        $this->assertTrue($array['is_visible']);
+    }
+
+    public function testDeleteBrandsThrowsExceptionForEmptyArray(): void
+    {
+        $this->expectException(ValidationException::class);
+        $this->expectExceptionMessage('Payload cannot be empty');
+
+        $this->client->deleteBrands([]);
+    }
+
+    public function testDeleteBrandsThrowsExceptionForTooManyItems(): void
+    {
+        $ids = [];
+        for ($i = 0; $i < 101; $i++) {
+            $ids[] = sprintf('BRAND-%03d', $i);
+        }
+
+        $this->expectException(ValidationException::class);
+        $this->expectExceptionMessage('Too many items: 101 provided, maximum is 100');
+
+        $this->client->deleteBrands($ids);
     }
 
     public function testDeleteResultFromArray(): void

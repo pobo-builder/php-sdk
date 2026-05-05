@@ -286,4 +286,169 @@ final class ProductTest extends TestCase
         $this->assertNull($product->siteLink);
         $this->assertNull($product->richSnippet);
     }
+
+    public function testProductToArrayOmitsBrandIdByDefault(): void
+    {
+        $product = new Product(
+            id: 'PROD-001',
+            isVisible: true,
+            name: LocalizedString::create('Product'),
+            url: LocalizedString::create('https://example.com'),
+        );
+
+        $array = $product->toArray();
+
+        $this->assertArrayNotHasKey('brand_id', $array);
+    }
+
+    public function testProductToArrayIncludesBrandIdString(): void
+    {
+        $product = new Product(
+            id: 'PROD-001',
+            isVisible: true,
+            name: LocalizedString::create('Product'),
+            url: LocalizedString::create('https://example.com'),
+            brandId: 'BRAND-001',
+        );
+
+        $array = $product->toArray();
+
+        $this->assertSame('BRAND-001', $array['brand_id']);
+    }
+
+    public function testProductToArrayIncludesBrandIdNullToUnset(): void
+    {
+        $product = new Product(
+            id: 'PROD-001',
+            isVisible: true,
+            name: LocalizedString::create('Product'),
+            url: LocalizedString::create('https://example.com'),
+            brandId: null,
+        );
+
+        $array = $product->toArray();
+
+        $this->assertArrayHasKey('brand_id', $array);
+        $this->assertNull($array['brand_id']);
+    }
+
+    public function testProductToArrayWithExplicitBrandIdUnsetSentinel(): void
+    {
+        $product = new Product(
+            id: 'PROD-001',
+            isVisible: true,
+            name: LocalizedString::create('Product'),
+            url: LocalizedString::create('https://example.com'),
+            brandId: Product::BRAND_ID_UNSET,
+        );
+
+        $array = $product->toArray();
+
+        $this->assertArrayNotHasKey('brand_id', $array);
+    }
+
+    public function testProductFromArrayWithBrandIdString(): void
+    {
+        $data = [
+            'id' => 'PROD-BRAND',
+            'is_visible' => true,
+            'name' => ['default' => 'Product'],
+            'url' => ['default' => 'https://example.com'],
+            'brand_id' => 'BRAND-001',
+        ];
+
+        $product = Product::fromArray($data);
+
+        $this->assertSame('BRAND-001', $product->brandId);
+    }
+
+    public function testProductFromArrayWithBrandIdNull(): void
+    {
+        $data = [
+            'id' => 'PROD-NOBRAND',
+            'is_visible' => true,
+            'name' => ['default' => 'Product'],
+            'url' => ['default' => 'https://example.com'],
+            'brand_id' => null,
+        ];
+
+        $product = Product::fromArray($data);
+
+        $this->assertNull($product->brandId);
+    }
+
+    public function testProductFromArrayWithoutBrandIdKeyKeepsSentinel(): void
+    {
+        $data = [
+            'id' => 'PROD-LEGACY',
+            'is_visible' => true,
+            'name' => ['default' => 'Product'],
+            'url' => ['default' => 'https://example.com'],
+        ];
+
+        $product = Product::fromArray($data);
+
+        $this->assertSame(Product::BRAND_ID_UNSET, $product->brandId);
+        $this->assertArrayNotHasKey('brand_id', $product->toArray());
+    }
+
+    public function testProductFromArrayThenToArrayRoundtripsBrandId(): void
+    {
+        $data = [
+            'id' => 'PROD-RT',
+            'is_visible' => true,
+            'name' => ['default' => 'Product'],
+            'url' => ['default' => 'https://example.com'],
+            'brand_id' => 'BRAND-RT',
+        ];
+
+        $array = Product::fromArray($data)->toArray();
+
+        $this->assertSame('BRAND-RT', $array['brand_id']);
+    }
+
+    public function testProductCategoriesIdsFiltersEmptyStringsAndNulls(): void
+    {
+        $product = new Product(
+            id: 'PROD-001',
+            isVisible: true,
+            name: LocalizedString::create('Product'),
+            url: LocalizedString::create('https://example.com'),
+            categoriesIds: ['CAT-001', '', 'CAT-002', null, 'CAT-003'],
+        );
+
+        $this->assertSame(['CAT-001', 'CAT-002', 'CAT-003'], $product->categoriesIds);
+        $this->assertSame(['CAT-001', 'CAT-002', 'CAT-003'], $product->toArray()['categories_ids']);
+    }
+
+    public function testProductParametersIdsFiltersEmptyStringsAndNulls(): void
+    {
+        $product = new Product(
+            id: 'PROD-001',
+            isVisible: true,
+            name: LocalizedString::create('Product'),
+            url: LocalizedString::create('https://example.com'),
+            parametersIds: [1, '', 2, null, 3],
+        );
+
+        $this->assertSame([1, 2, 3], $product->parametersIds);
+        $this->assertSame([1, 2, 3], $product->toArray()['parameters_ids']);
+    }
+
+    public function testProductCategoriesIdsAllEmptyDoesNotEmitKey(): void
+    {
+        $product = new Product(
+            id: 'PROD-001',
+            isVisible: true,
+            name: LocalizedString::create('Product'),
+            url: LocalizedString::create('https://example.com'),
+            categoriesIds: ['', null, ''],
+            parametersIds: ['', null],
+        );
+
+        $array = $product->toArray();
+
+        $this->assertArrayNotHasKey('categories_ids', $array);
+        $this->assertArrayNotHasKey('parameters_ids', $array);
+    }
 }

@@ -93,4 +93,32 @@ final class BulkImportTest extends IntegrationTestCase
 
         self::assertCount(self::BULK_SIZE, $foundIds, 'All imported blogs should be retrievable.');
     }
+
+    public function testBulkImportBrands(): void
+    {
+        $brands = [];
+        for ($i = 0; $i < self::BULK_SIZE; $i++) {
+            $brands[] = $this->makeBrand();
+        }
+        $expectedIds = array_map(fn($b) => $b->id, $brands);
+
+        $importResult = $this->client->importBrands($brands);
+
+        self::assertTrue($importResult->success);
+        self::assertSame(0, $importResult->skipped, sprintf('Unexpected errors: %s', json_encode($importResult->errors)));
+        self::assertFalse($importResult->hasErrors());
+        self::assertSame(self::BULK_SIZE, $importResult->imported + $importResult->updated);
+
+        $foundIds = [];
+        foreach ($this->client->iterateBrands(isEdited: false, lang: [Language::ALL]) as $brand) {
+            if (in_array($brand->id, $expectedIds, true)) {
+                $foundIds[] = $brand->id;
+            }
+            if (count($foundIds) === self::BULK_SIZE) {
+                break;
+            }
+        }
+
+        self::assertCount(self::BULK_SIZE, $foundIds, 'All imported brands should be retrievable.');
+    }
 }

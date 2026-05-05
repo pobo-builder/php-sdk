@@ -99,6 +99,49 @@ final class BulkUpdateTest extends IntegrationTestCase
         self::assertSame(self::BULK_SIZE, $verified);
     }
 
+    public function testReimportBrandsTriggersUpdate(): void
+    {
+        $originals = [];
+        for ($i = 0; $i < self::BULK_SIZE; $i++) {
+            $originals[] = $this->makeBrand();
+        }
+
+        $firstResult = $this->client->importBrands($originals);
+
+        self::assertSame(self::BULK_SIZE, $firstResult->imported);
+        self::assertSame(0, $firstResult->updated);
+        self::assertFalse($firstResult->hasErrors());
+
+        $updates = array_map(fn($brand) => $this->makeBrand($brand->id), $originals);
+
+        $secondResult = $this->client->importBrands($updates);
+
+        self::assertSame(0, $secondResult->imported);
+        self::assertSame(self::BULK_SIZE, $secondResult->updated);
+        self::assertFalse($secondResult->hasErrors());
+
+        $expectedNamesById = [];
+        foreach ($updates as $brand) {
+            $expectedNamesById[$brand->id] = $brand->name->getDefault();
+        }
+
+        $verified = 0;
+        foreach ($this->client->iterateBrands(isEdited: false, lang: [Language::ALL]) as $brand) {
+            if (isset($expectedNamesById[$brand->id])) {
+                self::assertSame(
+                    $expectedNamesById[$brand->id],
+                    $brand->name->getDefault(),
+                );
+                $verified++;
+            }
+            if ($verified === self::BULK_SIZE) {
+                break;
+            }
+        }
+
+        self::assertSame(self::BULK_SIZE, $verified);
+    }
+
     public function testReimportBlogsTriggersUpdate(): void
     {
         $originals = [];

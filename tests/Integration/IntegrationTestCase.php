@@ -8,6 +8,7 @@ use Faker\Factory as FakerFactory;
 use Faker\Generator as FakerGenerator;
 use PHPUnit\Framework\TestCase;
 use Pobo\Sdk\DTO\Blog;
+use Pobo\Sdk\DTO\Brand;
 use Pobo\Sdk\DTO\Category;
 use Pobo\Sdk\DTO\LocalizedString;
 use Pobo\Sdk\DTO\Product;
@@ -35,6 +36,9 @@ abstract class IntegrationTestCase extends TestCase
 
     /** @var array<string> */
     private array $blogIdsToCleanup = [];
+
+    /** @var array<string> */
+    private array $brandIdsToCleanup = [];
 
     protected function setUp(): void
     {
@@ -87,6 +91,13 @@ abstract class IntegrationTestCase extends TestCase
             } catch (\Throwable) {
             }
         }
+
+        if ($this->brandIdsToCleanup !== []) {
+            try {
+                $this->client->deleteBrands($this->brandIdsToCleanup);
+            } catch (\Throwable) {
+            }
+        }
     }
 
     protected function trackProduct(string $id): void
@@ -124,6 +135,19 @@ abstract class IntegrationTestCase extends TestCase
     {
         $this->blogIdsToCleanup = array_values(array_filter(
             $this->blogIdsToCleanup,
+            fn(string $existing) => $existing !== $id,
+        ));
+    }
+
+    protected function trackBrand(string $id): void
+    {
+        $this->brandIdsToCleanup[] = $id;
+    }
+
+    protected function untrackBrand(string $id): void
+    {
+        $this->brandIdsToCleanup = array_values(array_filter(
+            $this->brandIdsToCleanup,
             fn(string $existing) => $existing !== $id,
         ));
     }
@@ -210,6 +234,31 @@ abstract class IntegrationTestCase extends TestCase
             category: $this->faker->randomElement(['news', 'tips', 'reviews', 'guides']),
             description: LocalizedString::create(sprintf('<p>%s</p>', $this->faker->paragraph(4)))
                 ->withTranslation(Language::CS, sprintf('<p>%s</p>', $this->faker->paragraph(4))),
+        );
+    }
+
+    /**
+     * Build a Brand with realistic faker content. See {@see makeProduct()} for ID behavior.
+     */
+    protected function makeBrand(?string $id = null): Brand
+    {
+        if ($id === null) {
+            $id = $this->uniqueId('brand');
+            $this->trackBrand($id);
+        }
+
+        $nameEn = $this->faker->unique()->company();
+        $nameCs = sprintf('Značka %s', $this->faker->unique()->word());
+        $slug = $this->faker->slug(2);
+
+        return new Brand(
+            id: $id,
+            isVisible: true,
+            name: LocalizedString::create($nameEn)->withTranslation(Language::CS, $nameCs),
+            url: LocalizedString::create(sprintf('https://example.com/znacky/%s', $slug))
+                ->withTranslation(Language::CS, sprintf('https://example.com/cs/znacky/%s', $slug)),
+            description: LocalizedString::create(sprintf('<p>%s</p>', $this->faker->paragraph(2)))
+                ->withTranslation(Language::CS, sprintf('<p>%s</p>', $this->faker->paragraph(2))),
         );
     }
 }
