@@ -7,6 +7,7 @@ namespace Pobo\Sdk\Tests\DTO;
 use PHPUnit\Framework\TestCase;
 use Pobo\Sdk\DTO\LocalizedString;
 use Pobo\Sdk\DTO\Product;
+use Pobo\Sdk\DTO\ProductVariant;
 
 final class ProductTest extends TestCase
 {
@@ -128,5 +129,71 @@ final class ProductTest extends TestCase
         $this->assertSame([], $product->images);
         $this->assertNull($product->guid);
         $this->assertNull($product->createdAt);
+    }
+
+    public function testFromArrayWithVariants(): void
+    {
+        $data = [
+            'id' => 'PROD-001',
+            'is_visible' => true,
+            'name' => ['default' => 'Test'],
+            'url' => ['default' => 'https://example.com'],
+            'variant' => [
+                ['code' => 'VAR-001', 'ean' => '8591234567890'],
+                ['code' => 'VAR-002', 'ean' => null],
+            ],
+        ];
+
+        $product = Product::fromArray($data);
+
+        $this->assertIsArray($product->variants);
+        $this->assertCount(2, $product->variants);
+        $this->assertContainsOnlyInstancesOf(ProductVariant::class, $product->variants);
+        $this->assertSame('VAR-001', $product->variants[0]->code);
+        $this->assertSame('8591234567890', $product->variants[0]->ean);
+        $this->assertSame('VAR-002', $product->variants[1]->code);
+        $this->assertNull($product->variants[1]->ean);
+    }
+
+    public function testFromArrayWithEmptyVariants(): void
+    {
+        $data = [
+            'id' => 'PROD-001',
+            'is_visible' => true,
+            'name' => ['default' => 'Test'],
+            'url' => ['default' => 'https://example.com'],
+            'variant' => [],
+        ];
+
+        $product = Product::fromArray($data);
+
+        $this->assertSame([], $product->variants);
+    }
+
+    public function testFromArrayWithoutVariantKeyLeavesVariantsNull(): void
+    {
+        $data = [
+            'id' => 'PROD-001',
+            'is_visible' => true,
+            'name' => ['default' => 'Test'],
+            'url' => ['default' => 'https://example.com'],
+        ];
+
+        $product = Product::fromArray($data);
+
+        $this->assertNull($product->variants);
+    }
+
+    public function testToArrayExcludesVariants(): void
+    {
+        $product = new Product(
+            id: 'PROD-001',
+            isVisible: true,
+            name: new LocalizedString(['default' => 'Test']),
+            url: new LocalizedString(['default' => 'https://example.com']),
+            variants: [new ProductVariant(code: 'VAR-001', ean: '8591234567890')],
+        );
+
+        $this->assertArrayNotHasKey('variant', $product->toArray());
     }
 }

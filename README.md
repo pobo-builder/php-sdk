@@ -206,8 +206,28 @@ foreach ($client->iterateProducts(include: [IncludeContent::MARKETPLACE]) as $pr
 | `nested`       | Raw widget JSON                              | product, category, brand, blog |
 | `site_link`    | Anchor navigation on H2 headings             | product, brand, blog           |
 | `rich_snippet` | JSON-LD structured data (FAQPage)            | product, category, brand, blog |
+| `variant`      | Product variants (code + EAN)                | product                        |
 
 `site_link` requires `enable_site_link` and `rich_snippet` requires `enable_rich_snippet` to be enabled on the e-shop in Pobo administration.
+
+### Product variants
+
+Request variants with `IncludeContent::VARIANT` — each product then exposes `variants`
+(a list of `ProductVariant` DTOs with `code` and nullable `ean`, ordered by internal ID):
+
+```php
+use Pobo\Sdk\Enum\IncludeContent;
+
+foreach ($client->iterateProducts(include: [IncludeContent::VARIANT]) as $product) {
+    foreach ($product->variants ?? [] as $variant) {
+        echo $variant->code;        // "ABC-001"
+        echo $variant->ean ?? '-';  // "8591234567890" or null
+    }
+}
+```
+
+`$product->variants` is `null` when `variant` was not requested via `include`, and an
+empty array when the product simply has no variants.
 
 ## Multilang
 
