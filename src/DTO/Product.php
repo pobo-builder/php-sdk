@@ -17,6 +17,7 @@ namespace Pobo\Sdk\DTO;
  *     content?: array<string, mixed>,
  *     site_link?: array<string, mixed>,
  *     rich_snippet?: array<string, mixed>,
+ *     variant?: array<array{code: string, ean?: string|null}>,
  *     images?: array<string>,
  *     categories_ids?: array<string>,
  *     parameters_ids?: array<int>,
@@ -48,6 +49,7 @@ final class Product
      * @param array<string|int|null> $categoriesIds Empty strings and nulls are filtered defensively
      * @param array<int|string|null> $parametersIds Empty strings and nulls are filtered defensively
      * @param array<array{id: string, name: array<string, string>}> $categories
+     * @param array<ProductVariant>|null $variants Null when `variant` was not requested via include, empty array when the product has no variants
      */
     public function __construct(
         public readonly string $id,
@@ -70,6 +72,7 @@ final class Product
         public readonly array $categories = [],
         public readonly ?\DateTimeInterface $createdAt = null,
         public readonly ?\DateTimeInterface $updatedAt = null,
+        public readonly ?array $variants = null,
     ) {
         $this->categoriesIds = array_values(array_map(
             static fn(mixed $value): string => (string) $value,
@@ -161,6 +164,12 @@ final class Product
             categories: $data['categories'] ?? [],
             createdAt: isset($data['created_at']) ? new \DateTimeImmutable($data['created_at']) : null,
             updatedAt: isset($data['updated_at']) ? new \DateTimeImmutable($data['updated_at']) : null,
+            variants: isset($data['variant'])
+                ? array_map(
+                    static fn(array $variant): ProductVariant => ProductVariant::fromArray($variant),
+                    $data['variant'],
+                )
+                : null,
         );
     }
 }

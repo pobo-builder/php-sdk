@@ -10,6 +10,7 @@ enum IncludeContent: string
     case NESTED = 'nested';
     case SITE_LINK = 'site_link';
     case RICH_SNIPPET = 'rich_snippet';
+    case VARIANT = 'variant';
 
     /**
      * @return array<string>

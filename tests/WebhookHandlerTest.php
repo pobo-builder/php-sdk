@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Pobo\Sdk\Tests;
 
+use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 use Pobo\Sdk\Enum\WebhookEvent;
 use Pobo\Sdk\Exception\WebhookException;
@@ -171,9 +172,7 @@ final class WebhookHandlerTest extends TestCase
         ];
     }
 
-    /**
-     * @dataProvider brandEventProvider
-     */
+    #[DataProvider('brandEventProvider')]
     public function testHandleValidBrandEvent(string $eventValue, WebhookEvent $expected): void
     {
         $payload = json_encode([
@@ -205,9 +204,7 @@ final class WebhookHandlerTest extends TestCase
         ];
     }
 
-    /**
-     * @dataProvider createDeleteEventProvider
-     */
+    #[DataProvider('createDeleteEventProvider')]
     public function testHandleValidCreateOrDeleteEvent(string $eventValue, WebhookEvent $expected): void
     {
         $payload = json_encode([

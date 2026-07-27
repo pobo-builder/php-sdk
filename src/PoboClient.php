@@ -121,7 +121,7 @@ class PoboClient
     }
 
     /**
-     * @param array<IncludeContent|string>|null $include Optional content to include: IncludeContent::MARKETPLACE, IncludeContent::NESTED, IncludeContent::SITE_LINK, IncludeContent::RICH_SNIPPET
+     * @param array<IncludeContent|string>|null $include Optional content to include: IncludeContent::MARKETPLACE, IncludeContent::NESTED, IncludeContent::SITE_LINK, IncludeContent::RICH_SNIPPET, IncludeContent::VARIANT
      * @param array<Language|string>|null $lang Languages to include in response. null = only default, [Language::ALL] = all languages
      * @return PaginatedResponse<Product>
      * @throws ApiException
