@@ -10,6 +10,7 @@ use Pobo\Sdk\DTO\Category;
 use Pobo\Sdk\DTO\CustomField;
 use Pobo\Sdk\DTO\DeleteResult;
 use Pobo\Sdk\DTO\ImportResult;
+use Pobo\Sdk\DTO\MultiImportResult;
 use Pobo\Sdk\DTO\PaginatedResponse;
 use Pobo\Sdk\DTO\Parameter;
 use Pobo\Sdk\DTO\Product;
@@ -119,6 +120,41 @@ class PoboClient
 
         $response = $this->request('POST', '/api/v2/rest/blogs', $payload);
         return ImportResult::fromArray($response);
+    }
+
+    /**
+     * Import several entity types in one all-or-nothing call (max 100 items across all sections).
+     * Sections run in the order custom fields → parameters → categories → brands → products → blogs,
+     * so products and categories may reference anything created in the same call. Any invalid item
+     * makes the API answer 422 (ApiException) and nothing is written.
+     *
+     * @param array<CustomField|array<string, mixed>> $customFields b2b eshops only
+     * @param array<Parameter|array<string, mixed>> $parameters
+     * @param array<Category|array<string, mixed>> $categories
+     * @param array<Brand|array<string, mixed>> $brands
+     * @param array<Product|array<string, mixed>> $products
+     * @param array<Blog|array<string, mixed>> $blogs
+     * @throws ValidationException
+     * @throws ApiException
+     */
+    public function multiImport(
+        array $customFields = [],
+        array $parameters = [],
+        array $categories = [],
+        array $brands = [],
+        array $products = [],
+        array $blogs = [],
+    ): MultiImportResult {
+        $response = $this->request('POST', '/api/v2/rest/multi-import', $this->buildMultiImportPayload(
+            customFields: $customFields,
+            parameters: $parameters,
+            categories: $categories,
+            brands: $brands,
+            products: $products,
+            blogs: $blogs,
+        ));
+
+        return MultiImportResult::fromArray($response);
     }
 
     /**
@@ -443,6 +479,50 @@ class PoboClient
         if ($count > self::MAX_BULK_ITEMS) {
             throw ValidationException::tooManyItems($count, self::MAX_BULK_ITEMS);
         }
+    }
+
+    /**
+     * @param array<CustomField|array<string, mixed>> $customFields
+     * @param array<Parameter|array<string, mixed>> $parameters
+     * @param array<Category|array<string, mixed>> $categories
+     * @param array<Brand|array<string, mixed>> $brands
+     * @param array<Product|array<string, mixed>> $products
+     * @param array<Blog|array<string, mixed>> $blogs
+     * @return array<string, array<array<string, mixed>>>
+     * @throws ValidationException
+     */
+    private function buildMultiImportPayload(
+        array $customFields,
+        array $parameters,
+        array $categories,
+        array $brands,
+        array $products,
+        array $blogs,
+    ): array {
+        $section = [
+            MultiImportResult::SECTION_CUSTOM_FIELDS => $customFields,
+            MultiImportResult::SECTION_PARAMETERS => $parameters,
+            MultiImportResult::SECTION_CATEGORIES => $categories,
+            MultiImportResult::SECTION_BRANDS => $brands,
+            MultiImportResult::SECTION_PRODUCTS => $products,
+            MultiImportResult::SECTION_BLOGS => $blogs,
+        ];
+
+        $this->validateBulkSize(array_merge(...array_values(array_map(array_values(...), $section))));
+
+        $payload = [];
+        foreach ($section as $name => $items) {
+            if ($items === []) {
+                continue;
+            }
+
+            $payload[$name] = array_values(array_map(
+                static fn(CustomField|Parameter|Category|Brand|Product|Blog|array $item): array => is_array($item) ? $item : $item->toArray(),
+                $items,
+            ));
+        }
+
+        return $payload;
     }
 
     /**

@@ -8,6 +8,8 @@ use PHPUnit\Framework\TestCase;
 use Pobo\Sdk\DTO\Blog;
 use Pobo\Sdk\DTO\Brand;
 use Pobo\Sdk\DTO\Category;
+use Pobo\Sdk\DTO\CustomField;
+use Pobo\Sdk\DTO\CustomFieldAssignment;
 use Pobo\Sdk\DTO\DeleteResult;
 use Pobo\Sdk\DTO\LocalizedString;
 use Pobo\Sdk\DTO\Parameter;
@@ -702,5 +704,54 @@ final class PoboClientTest extends TestCase
             ],
             $method->invoke($this->client, ['segment' => ['retail', 'vip'], 'region' => [3 => 'sk']]),
         );
+    }
+
+    public function testMultiImportThrowsExceptionForEmptyPayload(): void
+    {
+        $this->expectException(ValidationException::class);
+        $this->expectExceptionMessage('Payload cannot be empty');
+
+        $this->client->multiImport();
+    }
+
+    public function testMultiImportCountsItemsAcrossSections(): void
+    {
+        $products = array_fill(0, 60, ['id' => 'P']);
+        $categories = array_fill(0, 41, ['id' => 'C']);
+
+        $this->expectException(ValidationException::class);
+        $this->expectExceptionMessage('Too many items: 101 provided, maximum is 100');
+
+        $this->client->multiImport(categories: $categories, products: $products);
+    }
+
+    public function testMultiImportPayloadConvertsDtosAndSkipsEmptySections(): void
+    {
+        $method = new \ReflectionMethod(PoboClient::class, 'buildMultiImportPayload');
+
+        $payload = $method->invoke(
+            $this->client,
+            [new CustomField(code: 'segment', name: 'Segment', values: ['vip'])],
+            [],
+            [],
+            [],
+            [
+                new Product(
+                    id: 'P-1',
+                    isVisible: true,
+                    name: LocalizedString::create('Product'),
+                    url: LocalizedString::create('https://example.com/p-1'),
+                    customFields: [new CustomFieldAssignment(code: 'segment', values: ['vip'])],
+                ),
+                ['id' => 'P-2', 'is_visible' => true],
+            ],
+            [],
+        );
+
+        $this->assertIsArray($payload);
+        $this->assertSame(['custom_fields', 'products'], array_keys($payload));
+        $this->assertSame([['code' => 'segment', 'name' => 'Segment', 'value' => ['vip']]], $payload['custom_fields']);
+        $this->assertSame([['code' => 'segment', 'value' => ['vip']]], $payload['products'][0]['custom_field']);
+        $this->assertSame(['id' => 'P-2', 'is_visible' => true], $payload['products'][1]);
     }
 }

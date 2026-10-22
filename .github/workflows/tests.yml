@@ -139,6 +139,5 @@ jobs:
       - name: Run integration tests
         env:
           POBO_API_TOKEN: ${{ secrets.POBO_API_TOKEN }}
-          POBO_B2B_API_TOKEN: ${{ secrets.POBO_B2B_API_TOKEN }}
           POBO_BASE_URL: https://api.pobo.space
         run: vendor/bin/phpunit --colors=always --testsuite=Integration --display-skipped

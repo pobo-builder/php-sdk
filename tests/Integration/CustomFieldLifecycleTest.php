@@ -6,13 +6,12 @@ namespace Pobo\Sdk\Tests\Integration;
 
 use Pobo\Sdk\DTO\CustomField;
 use Pobo\Sdk\DTO\CustomFieldAssignment;
+use Pobo\Sdk\DTO\MultiImportResult;
 use Pobo\Sdk\DTO\Product;
 use Pobo\Sdk\Enum\IncludeContent;
-use Pobo\Sdk\PoboClient;
 
 /**
- * Custom fields exist only on b2b eshops, so this test needs its own token:
- * POBO_B2B_API_TOKEN (and optionally POBO_BASE_URL). Without it the test is skipped.
+ * Custom fields exist only on b2b eshops — the test e-shop behind POBO_API_TOKEN is one.
  */
 final class CustomFieldLifecycleTest extends IntegrationTestCase
 {
@@ -21,18 +20,6 @@ final class CustomFieldLifecycleTest extends IntegrationTestCase
     protected function setUp(): void
     {
         parent::setUp();
-
-        $token = getenv('POBO_B2B_API_TOKEN');
-        if ($token === false || $token === '') {
-            self::markTestSkipped('Custom field tests require POBO_B2B_API_TOKEN of a b2b eshop.');
-        }
-
-        $baseUrl = getenv('POBO_BASE_URL');
-        $this->client = new PoboClient(
-            apiToken: $token,
-            baseUrl: $baseUrl === false || $baseUrl === '' ? 'https://api.pobo.space' : $baseUrl,
-            timeout: 60,
-        );
 
         $this->code = strtolower(str_replace('-', '_', $this->uniqueId('field')));
     }
@@ -93,6 +80,27 @@ final class CustomFieldLifecycleTest extends IntegrationTestCase
         $fieldDelete = $this->client->deleteCustomFields([$this->code]);
         self::assertSame(1, $fieldDelete->deleted);
         self::assertNull($this->findField());
+    }
+
+    public function testMultiImportDefinesAndAssignsInOneCall(): void
+    {
+        $product = $this->withCustomFields(product: $this->makeProduct(), values: ['vip']);
+
+        $result = $this->client->multiImport(
+            customFields: [new CustomField(code: $this->code, name: 'SDK CI segment', values: ['wholesale'])],
+            products: [$product],
+        );
+
+        self::assertTrue($result->success);
+        self::assertSame(1, $result->section(MultiImportResult::SECTION_CUSTOM_FIELDS)->imported);
+        self::assertSame(1, $result->section(MultiImportResult::SECTION_PRODUCTS)->imported + $result->section(MultiImportResult::SECTION_PRODUCTS)->updated);
+
+        $found = [];
+        foreach ($this->client->iterateProducts(isEdited: false, customField: [$this->code => 'vip']) as $candidate) {
+            $found[] = $candidate->id;
+        }
+
+        self::assertSame([$product->id], $found);
     }
 
     private function findField(): ?CustomField

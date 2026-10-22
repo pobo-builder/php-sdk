@@ -148,6 +148,37 @@ $result = $client->importBlogs([
 
 > **Per-item errors:** validation failures during bulk import (invalid URL, missing language, …) **don't** raise an exception. They appear in `$result->errors[]` while the rest of the batch is processed. Always inspect `$result->hasErrors()`.
 
+### Multi-import (all-or-nothing)
+
+`multiImport()` sends several entity types in one call. It is atomic: if any item is invalid,
+the API answers `422` (thrown as `ApiException`) and **nothing** is written. Sections run in the
+order custom fields → parameters → categories → brands → products → blogs, so a product may
+reference a brand, category, parameter value or custom field code created in the same call.
+At most 100 items across all sections.
+
+```php
+use Pobo\Sdk\DTO\MultiImportResult;
+
+$result = $client->multiImport(
+    customFields: [new CustomField(code: 'segment', name: 'Segment', values: ['wholesale'])],
+    brands: [$brand],
+    products: [
+        new Product(
+            id: 'PROD-001',
+            isVisible: true,
+            name: LocalizedString::create('iPhone 15'),
+            url: LocalizedString::create('https://example.com/iphone-15'),
+            brandId: 'BRAND-001',
+            customFields: [new CustomFieldAssignment(code: 'segment', values: ['wholesale'])],
+        ),
+    ],
+);
+
+echo $result->section(MultiImportResult::SECTION_PRODUCTS)->imported;
+```
+
+`customFields` works only on b2b eshops (see [Custom fields](#custom-fields-b2b-eshops)).
+
 ## Delete
 
 Soft-delete by external ID (max 100 per request):
@@ -536,6 +567,7 @@ try {
 | `importParameters(array $parameters)`                                           | Bulk import parameters (max 100) |
 | `importBlogs(array $blogs)`                                                     | Bulk import blogs (max 100)      |
 | `importCustomFields(array $customFields)`                                       | Bulk import custom fields (max 100, b2b) |
+| `multiImport(?customFields, ?parameters, ?categories, ?brands, ?products, ?blogs)` | Atomic import of several entity types (max 100 in total) |
 | `deleteProducts(array $ids)`                                                    | Bulk delete products (max 100)   |
 | `deleteCategories(array $ids)`                                                  | Bulk delete categories (max 100) |
 | `deleteBrands(array $ids)`                                                      | Bulk delete brands (max 100)     |
@@ -581,19 +613,13 @@ Unit tests are pure (no network) and run on every CI build across PHP 8.1–8.5.
 
 ### Integration tests
 
-Integration tests hit the real `api.pobo.space` API and verify that the SDK's wire format is in sync with the server. They require a dedicated test e-shop and a valid REST API token.
+Integration tests hit the real `api.pobo.space` API and verify that the SDK's wire format is in sync with the server. They require a dedicated **b2b** test e-shop (custom fields exist only there) and a valid REST API token.
 
 ```bash
 POBO_API_TOKEN="your-test-eshop-token" vendor/bin/phpunit --testsuite=Integration
 ```
 
 If `POBO_API_TOKEN` is not set, all integration tests are marked **skipped** (not failed). The CI workflow runs integration tests on pushes to `master`, PRs from the same repository (forks are skipped — secrets are not exposed there), and manual dispatch. Each run uses a unique ID prefix and `tearDown()` removes anything the test created.
-
-Custom fields exist only on b2b eshops, so `CustomFieldLifecycleTest` needs a second token of a b2b test e-shop and is skipped without it:
-
-```bash
-POBO_API_TOKEN="your-test-eshop-token" POBO_B2B_API_TOKEN="your-b2b-test-eshop-token" vendor/bin/phpunit --testsuite=Integration
-```
 
 ## License
 
