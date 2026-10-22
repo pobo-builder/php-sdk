@@ -11,6 +11,7 @@ enum IncludeContent: string
     case SITE_LINK = 'site_link';
     case RICH_SNIPPET = 'rich_snippet';
     case VARIANT = 'variant';
+    case CUSTOM_FIELD = 'custom_field';
 
     /**
      * @return array<string>

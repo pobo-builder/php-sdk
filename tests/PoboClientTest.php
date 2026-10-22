@@ -613,4 +613,58 @@ final class PoboClientTest extends TestCase
 
         $this->assertSame('?include=site_link%2Crich_snippet', $query);
     }
+
+    public function testImportCustomFieldsThrowsExceptionForEmptyArray(): void
+    {
+        $this->expectException(ValidationException::class);
+
+        $this->client->importCustomFields([]);
+    }
+
+    public function testDeleteCustomFieldsThrowsExceptionForTooManyItems(): void
+    {
+        $this->expectException(ValidationException::class);
+        $this->expectExceptionMessage('Too many items: 101 provided, maximum is 100');
+
+        $this->client->deleteCustomFields(array_map(static fn(int $i): string => sprintf('code_%d', $i), range(1, 101)));
+    }
+
+    public function testDeleteCustomFieldValuesThrowsExceptionForEmptyArray(): void
+    {
+        $this->expectException(ValidationException::class);
+
+        $this->client->deleteCustomFieldValues([]);
+    }
+
+    public function testBuildQueryParamsWithCustomFieldUsesArrayForm(): void
+    {
+        $method = new \ReflectionMethod(PoboClient::class, 'buildQueryParams');
+
+        $query = $method->invoke(
+            $this->client,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            ['segment' => ['wholesale', 'vip'], 'size' => '1,5 l'],
+        );
+
+        $this->assertIsString($query);
+        parse_str(ltrim($query, '?'), $parsed);
+        $this->assertSame(
+            ['custom_field' => ['segment' => ['wholesale', 'vip'], 'size' => ['1,5 l']]],
+            $parsed,
+        );
+    }
+
+    public function testBuildQueryParamsWithEmptyCustomFieldReturnsEmpty(): void
+    {
+        $method = new \ReflectionMethod(PoboClient::class, 'buildQueryParams');
+
+        $query = $method->invoke($this->client, null, null, null, null, null, null, []);
+
+        $this->assertSame('', $query);
+    }
 }

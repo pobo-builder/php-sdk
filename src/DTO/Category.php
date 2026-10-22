@@ -16,6 +16,7 @@ namespace Pobo\Sdk\DTO;
  *     content?: array<string, mixed>,
  *     rich_snippet?: array<string, mixed>,
  *     images?: array<string>,
+ *     custom_field?: array<array{code: string, value?: array<string>, name?: string|null}>|null,
  *     guid?: string|null,
  *     is_loaded?: bool,
  *     created_at?: string,
@@ -26,6 +27,7 @@ final class Category
 {
     /**
      * @param array<string> $images
+     * @param array<CustomFieldAssignment>|null $customFields b2b eshops only. Import: null = not sent (server keeps the values), [] = remove every value, a list = replace the whole set. Export: null when `custom_field` was not requested via include
      */
     public function __construct(
         public readonly string $id,
@@ -42,6 +44,7 @@ final class Category
         public readonly ?bool $isLoaded = null,
         public readonly ?\DateTimeInterface $createdAt = null,
         public readonly ?\DateTimeInterface $updatedAt = null,
+        public readonly ?array $customFields = null,
     ) {
     }
 
@@ -73,6 +76,10 @@ final class Category
             $data['images'] = $this->images;
         }
 
+        if ($this->customFields !== null) {
+            $data['custom_field'] = CustomFieldAssignment::toPayload($this->customFields);
+        }
+
         return $data;
     }
 
@@ -97,6 +104,7 @@ final class Category
             isLoaded: $data['is_loaded'] ?? null,
             createdAt: isset($data['created_at']) ? new \DateTimeImmutable($data['created_at']) : null,
             updatedAt: isset($data['updated_at']) ? new \DateTimeImmutable($data['updated_at']) : null,
+            customFields: isset($data['custom_field']) ? CustomFieldAssignment::listFromArray($data['custom_field']) : null,
         );
     }
 }

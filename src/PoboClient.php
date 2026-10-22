@@ -7,6 +7,7 @@ namespace Pobo\Sdk;
 use Pobo\Sdk\DTO\Blog;
 use Pobo\Sdk\DTO\Brand;
 use Pobo\Sdk\DTO\Category;
+use Pobo\Sdk\DTO\CustomField;
 use Pobo\Sdk\DTO\DeleteResult;
 use Pobo\Sdk\DTO\ImportResult;
 use Pobo\Sdk\DTO\PaginatedResponse;
@@ -121,8 +122,30 @@ class PoboClient
     }
 
     /**
-     * @param array<IncludeContent|string>|null $include Optional content to include: IncludeContent::MARKETPLACE, IncludeContent::NESTED, IncludeContent::SITE_LINK, IncludeContent::RICH_SNIPPET, IncludeContent::VARIANT
+     * Create or update custom fields by code (b2b eshops only). Values are only added;
+     * remove one with deleteCustomFieldValues().
+     *
+     * @param array<CustomField|array<string, mixed>> $customFields
+     * @throws ValidationException
+     * @throws ApiException
+     */
+    public function importCustomFields(array $customFields): ImportResult
+    {
+        $this->validateBulkSize($customFields);
+
+        $payload = array_map(
+            fn($customField) => $customField instanceof CustomField ? $customField->toArray() : $customField,
+            $customFields
+        );
+
+        $response = $this->request('POST', '/api/v2/rest/custom-fields', $payload);
+        return ImportResult::fromArray($response);
+    }
+
+    /**
+     * @param array<IncludeContent|string>|null $include Optional content to include: IncludeContent::MARKETPLACE, IncludeContent::NESTED, IncludeContent::SITE_LINK, IncludeContent::RICH_SNIPPET, IncludeContent::VARIANT, IncludeContent::CUSTOM_FIELD
      * @param array<Language|string>|null $lang Languages to include in response. null = only default, [Language::ALL] = all languages
+     * @param array<string, array<string>|string>|null $customField Filter by custom fields (b2b eshops only): code => value(s). OR within one code, AND across codes
      * @return PaginatedResponse<Product>
      * @throws ApiException
      */
@@ -133,15 +156,17 @@ class PoboClient
         ?bool $isEdited = null,
         ?array $include = null,
         ?array $lang = null,
+        ?array $customField = null,
     ): PaginatedResponse {
-        $query = $this->buildQueryParams($page, $perPage, $lastUpdateFrom, $isEdited, $include, $lang);
+        $query = $this->buildQueryParams($page, $perPage, $lastUpdateFrom, $isEdited, $include, $lang, $customField);
         $response = $this->request('GET', '/api/v2/rest/products' . $query);
         return PaginatedResponse::fromArray($response, Product::class);
     }
 
     /**
-     * @param array<IncludeContent|string>|null $include Optional content to include: IncludeContent::MARKETPLACE, IncludeContent::NESTED, IncludeContent::RICH_SNIPPET
+     * @param array<IncludeContent|string>|null $include Optional content to include: IncludeContent::MARKETPLACE, IncludeContent::NESTED, IncludeContent::RICH_SNIPPET, IncludeContent::CUSTOM_FIELD
      * @param array<Language|string>|null $lang Languages to include in response. null = only default, [Language::ALL] = all languages
+     * @param array<string, array<string>|string>|null $customField Filter by custom fields (b2b eshops only): code => value(s). OR within one code, AND across codes
      * @return PaginatedResponse<Category>
      * @throws ApiException
      */
@@ -152,8 +177,9 @@ class PoboClient
         ?bool $isEdited = null,
         ?array $include = null,
         ?array $lang = null,
+        ?array $customField = null,
     ): PaginatedResponse {
-        $query = $this->buildQueryParams($page, $perPage, $lastUpdateFrom, $isEdited, $include, $lang);
+        $query = $this->buildQueryParams($page, $perPage, $lastUpdateFrom, $isEdited, $include, $lang, $customField);
         $response = $this->request('GET', '/api/v2/rest/categories' . $query);
         return PaginatedResponse::fromArray($response, Category::class);
     }
@@ -194,6 +220,19 @@ class PoboClient
         $query = $this->buildQueryParams($page, $perPage, $lastUpdateFrom, $isEdited, $include, $lang);
         $response = $this->request('GET', '/api/v2/rest/blogs' . $query);
         return PaginatedResponse::fromArray($response, Blog::class);
+    }
+
+    /**
+     * Custom fields of the eshop with all their values (b2b eshops only).
+     *
+     * @return PaginatedResponse<CustomField>
+     * @throws ApiException
+     */
+    public function getCustomFields(?int $page = null, ?int $perPage = null): PaginatedResponse
+    {
+        $query = $this->buildQueryParams($page, $perPage, null, null);
+        $response = $this->request('GET', '/api/v2/rest/custom-fields' . $query);
+        return PaginatedResponse::fromArray($response, CustomField::class);
     }
 
     /**
@@ -257,8 +296,46 @@ class PoboClient
     }
 
     /**
+     * Delete custom fields with all their values; products and categories lose them too.
+     *
+     * @param array<string> $codes
+     * @throws ValidationException
+     * @throws ApiException
+     */
+    public function deleteCustomFields(array $codes): DeleteResult
+    {
+        $this->validateBulkSize($codes);
+
+        $payload = array_map(fn(string $code) => ['code' => $code], array_values($codes));
+
+        $response = $this->request('DELETE', '/api/v2/rest/custom-fields', $payload);
+        return DeleteResult::fromArray($response);
+    }
+
+    /**
+     * Delete values of custom fields; products and categories lose them too. `deleted` counts values.
+     *
+     * @param array<string, array<string>> $valuesByCode code => values to delete
+     * @throws ValidationException
+     * @throws ApiException
+     */
+    public function deleteCustomFieldValues(array $valuesByCode): DeleteResult
+    {
+        $this->validateBulkSize($valuesByCode);
+
+        $payload = [];
+        foreach ($valuesByCode as $code => $values) {
+            $payload[] = ['code' => (string) $code, 'value' => array_values($values)];
+        }
+
+        $response = $this->request('DELETE', '/api/v2/rest/custom-fields/value', $payload);
+        return DeleteResult::fromArray($response);
+    }
+
+    /**
      * @param array<IncludeContent|string>|null $include Optional content to include
      * @param array<Language|string>|null $lang Languages to include in response
+     * @param array<string, array<string>|string>|null $customField Filter by custom fields (b2b eshops only)
      * @return \Generator<Product>
      * @throws ApiException
      */
@@ -267,11 +344,12 @@ class PoboClient
         ?bool $isEdited = null,
         ?array $include = null,
         ?array $lang = null,
+        ?array $customField = null,
     ): \Generator {
         $page = 1;
 
         do {
-            $response = $this->getProducts($page, self::MAX_BULK_ITEMS, $lastUpdateFrom, $isEdited, $include, $lang);
+            $response = $this->getProducts($page, self::MAX_BULK_ITEMS, $lastUpdateFrom, $isEdited, $include, $lang, $customField);
 
             foreach ($response->data as $product) {
                 yield $product;
@@ -284,6 +362,7 @@ class PoboClient
     /**
      * @param array<IncludeContent|string>|null $include Optional content to include
      * @param array<Language|string>|null $lang Languages to include in response
+     * @param array<string, array<string>|string>|null $customField Filter by custom fields (b2b eshops only)
      * @return \Generator<Category>
      * @throws ApiException
      */
@@ -292,11 +371,12 @@ class PoboClient
         ?bool $isEdited = null,
         ?array $include = null,
         ?array $lang = null,
+        ?array $customField = null,
     ): \Generator {
         $page = 1;
 
         do {
-            $response = $this->getCategories($page, self::MAX_BULK_ITEMS, $lastUpdateFrom, $isEdited, $include, $lang);
+            $response = $this->getCategories($page, self::MAX_BULK_ITEMS, $lastUpdateFrom, $isEdited, $include, $lang, $customField);
 
             foreach ($response->data as $category) {
                 yield $category;
@@ -375,6 +455,7 @@ class PoboClient
     /**
      * @param array<IncludeContent|string>|null $include
      * @param array<Language|string>|null $lang
+     * @param array<string, array<string>|string>|null $customField
      */
     private function buildQueryParams(
         ?int $page,
@@ -383,6 +464,7 @@ class PoboClient
         ?bool $isEdited,
         ?array $include = null,
         ?array $lang = null,
+        ?array $customField = null,
     ): string {
         $params = [];
 
@@ -416,6 +498,14 @@ class PoboClient
                 $lang,
             );
             $params['lang'] = implode(',', $values);
+        }
+
+        if ($customField !== null && $customField !== []) {
+            // Always the array form custom_field[code][]=value, so a value containing a comma stays whole.
+            $params['custom_field'] = array_map(
+                static fn(array|string $values): array => array_values((array) $values),
+                $customField,
+            );
         }
 
         return $params === [] ? '' : sprintf('?%s', http_build_query($params));
