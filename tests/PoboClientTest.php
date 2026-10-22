@@ -667,4 +667,40 @@ final class PoboClientTest extends TestCase
 
         $this->assertSame('', $query);
     }
+
+    public function testDeleteCustomFieldValuesThrowsExceptionForTooManyCodes(): void
+    {
+        $valuesByCode = [];
+        foreach (range(1, 101) as $i) {
+            $valuesByCode[sprintf('code_%d', $i)] = ['x'];
+        }
+
+        $this->expectException(ValidationException::class);
+        $this->expectExceptionMessage('Too many items: 101 provided, maximum is 100');
+
+        $this->client->deleteCustomFieldValues($valuesByCode);
+    }
+
+    public function testCustomFieldDeletePayload(): void
+    {
+        $method = new \ReflectionMethod(PoboClient::class, 'buildCustomFieldDeletePayload');
+
+        $this->assertSame(
+            [['code' => 'segment'], ['code' => 'region']],
+            $method->invoke($this->client, ['segment', 'region']),
+        );
+    }
+
+    public function testCustomFieldValueDeletePayload(): void
+    {
+        $method = new \ReflectionMethod(PoboClient::class, 'buildCustomFieldValueDeletePayload');
+
+        $this->assertSame(
+            [
+                ['code' => 'segment', 'value' => ['retail', 'vip']],
+                ['code' => 'region', 'value' => ['sk']],
+            ],
+            $method->invoke($this->client, ['segment' => ['retail', 'vip'], 'region' => [3 => 'sk']]),
+        );
+    }
 }

@@ -589,6 +589,12 @@ POBO_API_TOKEN="your-test-eshop-token" vendor/bin/phpunit --testsuite=Integratio
 
 If `POBO_API_TOKEN` is not set, all integration tests are marked **skipped** (not failed). The CI workflow runs integration tests on pushes to `master`, PRs from the same repository (forks are skipped — secrets are not exposed there), and manual dispatch. Each run uses a unique ID prefix and `tearDown()` removes anything the test created.
 
+Custom fields exist only on b2b eshops, so `CustomFieldLifecycleTest` needs a second token of a b2b test e-shop and is skipped without it:
+
+```bash
+POBO_API_TOKEN="your-test-eshop-token" POBO_B2B_API_TOKEN="your-b2b-test-eshop-token" vendor/bin/phpunit --testsuite=Integration
+```
+
 ## License
 
 MIT License

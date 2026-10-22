@@ -9,6 +9,7 @@ use Pobo\Sdk\DTO\Category;
 use Pobo\Sdk\DTO\CustomField;
 use Pobo\Sdk\DTO\CustomFieldAssignment;
 use Pobo\Sdk\DTO\LocalizedString;
+use Pobo\Sdk\DTO\PaginatedResponse;
 use Pobo\Sdk\DTO\Product;
 
 final class CustomFieldTest extends TestCase
@@ -103,6 +104,46 @@ final class CustomFieldTest extends TestCase
 
         $read = Category::fromArray($data);
         $this->assertSame(['vip'], $read->customFields[0]->values ?? null);
+    }
+
+    public function testAssignmentWithoutNameReadsNull(): void
+    {
+        $assignment = CustomFieldAssignment::fromArray(['code' => 'segment', 'value' => ['vip']]);
+
+        $this->assertNull($assignment->name);
+        $this->assertSame(['vip'], $assignment->values);
+    }
+
+    public function testAssignmentPayloadTakesDtoAndArrayMixed(): void
+    {
+        $this->assertSame(
+            [
+                ['code' => 'segment', 'value' => ['vip']],
+                ['code' => 'region', 'value' => ['cz']],
+            ],
+            CustomFieldAssignment::toPayload([
+                new CustomFieldAssignment(code: 'segment', values: ['vip']),
+                ['code' => 'region', 'value' => ['cz']],
+            ]),
+        );
+    }
+
+    public function testPaginatedResponseReadsCustomFields(): void
+    {
+        $response = PaginatedResponse::fromArray([
+            'data' => [
+                ['code' => 'region', 'name' => 'Region', 'value' => ['cz', 'sk']],
+                ['code' => 'segment', 'name' => 'Segment', 'value' => []],
+            ],
+            'meta' => ['current_page' => 1, 'per_page' => 100, 'total' => 2],
+        ], CustomField::class);
+
+        $this->assertCount(2, $response->data);
+        $this->assertInstanceOf(CustomField::class, $response->data[0]);
+        $this->assertSame('region', $response->data[0]->code);
+        $this->assertSame(['cz', 'sk'], $response->data[0]->values);
+        $this->assertSame([], $response->data[1]->values);
+        $this->assertFalse($response->hasMorePages());
     }
 
     /**

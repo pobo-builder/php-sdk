@@ -306,9 +306,7 @@ class PoboClient
     {
         $this->validateBulkSize($codes);
 
-        $payload = array_map(fn(string $code) => ['code' => $code], array_values($codes));
-
-        $response = $this->request('DELETE', '/api/v2/rest/custom-fields', $payload);
+        $response = $this->request('DELETE', '/api/v2/rest/custom-fields', $this->buildCustomFieldDeletePayload($codes));
         return DeleteResult::fromArray($response);
     }
 
@@ -323,12 +321,7 @@ class PoboClient
     {
         $this->validateBulkSize($valuesByCode);
 
-        $payload = [];
-        foreach ($valuesByCode as $code => $values) {
-            $payload[] = ['code' => (string) $code, 'value' => array_values($values)];
-        }
-
-        $response = $this->request('DELETE', '/api/v2/rest/custom-fields/value', $payload);
+        $response = $this->request('DELETE', '/api/v2/rest/custom-fields/value', $this->buildCustomFieldValueDeletePayload($valuesByCode));
         return DeleteResult::fromArray($response);
     }
 
@@ -450,6 +443,29 @@ class PoboClient
         if ($count > self::MAX_BULK_ITEMS) {
             throw ValidationException::tooManyItems($count, self::MAX_BULK_ITEMS);
         }
+    }
+
+    /**
+     * @param array<string> $codes
+     * @return array<array{code: string}>
+     */
+    private function buildCustomFieldDeletePayload(array $codes): array
+    {
+        return array_map(static fn(string $code): array => ['code' => $code], array_values($codes));
+    }
+
+    /**
+     * @param array<string, array<string>> $valuesByCode
+     * @return array<array{code: string, value: array<string>}>
+     */
+    private function buildCustomFieldValueDeletePayload(array $valuesByCode): array
+    {
+        $payload = [];
+        foreach ($valuesByCode as $code => $values) {
+            $payload[] = ['code' => (string) $code, 'value' => array_values($values)];
+        }
+
+        return $payload;
     }
 
     /**
