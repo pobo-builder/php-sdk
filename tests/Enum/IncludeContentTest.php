@@ -16,6 +16,7 @@ final class IncludeContentTest extends TestCase
         $this->assertSame('site_link', IncludeContent::SITE_LINK->value);
         $this->assertSame('rich_snippet', IncludeContent::RICH_SNIPPET->value);
         $this->assertSame('variant', IncludeContent::VARIANT->value);
+        $this->assertSame('custom_field', IncludeContent::CUSTOM_FIELD->value);
     }
 
     public function testValues(): void
@@ -27,7 +28,8 @@ final class IncludeContentTest extends TestCase
         $this->assertContains('site_link', $values);
         $this->assertContains('rich_snippet', $values);
         $this->assertContains('variant', $values);
-        $this->assertCount(5, $values);
+        $this->assertContains('custom_field', $values);
+        $this->assertCount(6, $values);
     }
 
     public function testIsValidReturnsTrue(): void

@@ -148,6 +148,37 @@ $result = $client->importBlogs([
 
 > **Per-item errors:** validation failures during bulk import (invalid URL, missing language, …) **don't** raise an exception. They appear in `$result->errors[]` while the rest of the batch is processed. Always inspect `$result->hasErrors()`.
 
+### Multi-import (all-or-nothing)
+
+`multiImport()` sends several entity types in one call. It is atomic: if any item is invalid,
+the API answers `422` (thrown as `ApiException`) and **nothing** is written. Sections run in the
+order custom fields → parameters → categories → brands → products → blogs, so a product may
+reference a brand, category, parameter value or custom field code created in the same call.
+At most 100 items across all sections.
+
+```php
+use Pobo\Sdk\DTO\MultiImportResult;
+
+$result = $client->multiImport(
+    customFields: [new CustomField(code: 'segment', name: 'Segment', values: ['wholesale'])],
+    brands: [$brand],
+    products: [
+        new Product(
+            id: 'PROD-001',
+            isVisible: true,
+            name: LocalizedString::create('iPhone 15'),
+            url: LocalizedString::create('https://example.com/iphone-15'),
+            brandId: 'BRAND-001',
+            customFields: [new CustomFieldAssignment(code: 'segment', values: ['wholesale'])],
+        ),
+    ],
+);
+
+echo $result->section(MultiImportResult::SECTION_PRODUCTS)->imported;
+```
+
+`customFields` works only on b2b eshops (see [Custom fields](#custom-fields-b2b-eshops)).
+
 ## Delete
 
 Soft-delete by external ID (max 100 per request):
@@ -228,6 +259,86 @@ foreach ($client->iterateProducts(include: [IncludeContent::VARIANT]) as $produc
 
 `$product->variants` is `null` when `variant` was not requested via `include`, and an
 empty array when the product simply has no variants.
+
+## Custom fields (b2b eshops)
+
+Custom fields are your own filtering fields for products and categories, independent of
+parameters (e.g. `segment = wholesale`, `region = cz`). They are available only for b2b eshops;
+any other eshop gets `403` from the `/custom-fields` endpoints and a skipped item on import.
+
+### Define fields
+
+```php
+use Pobo\Sdk\DTO\CustomField;
+
+$client->importCustomFields([
+    new CustomField(code: 'segment', name: 'Segment', values: ['wholesale', 'retail', 'vip']),
+    new CustomField(code: 'region', name: 'Region', values: ['cz', 'sk']),
+]);
+```
+
+- `code` is the stable key used in imports and filters — letters, digits, `_`, `-` and `.`,
+  at most 64 characters, **case-sensitive**. `name` is only a label and can change.
+- Values are only **added**; a value left out of a later import stays. Values are trimmed and
+  case-sensitive (`VIP` and `vip` are two values).
+
+### Assign to products and categories
+
+```php
+use Pobo\Sdk\DTO\CustomFieldAssignment;
+
+$client->importProducts([
+    new Product(
+        id: 'PROD-001',
+        isVisible: true,
+        name: LocalizedString::create('iPhone 15'),
+        url: LocalizedString::create('https://example.com/iphone-15'),
+        customFields: [
+            new CustomFieldAssignment(code: 'segment', values: ['wholesale', 'vip']),
+            new CustomFieldAssignment(code: 'region', values: ['cz']),
+        ],
+    ),
+]);
+```
+
+| Value of `customFields` | Behavior                                                  |
+|-------------------------|-----------------------------------------------------------|
+| omitted / `null`        | not sent — the product keeps its values                   |
+| `[]`                    | every value is **removed** from the product               |
+| a list                  | **replaces** the whole set of the product                 |
+
+The `code` must exist (`importCustomFields`), otherwise the product is skipped with
+`"Unknown custom field code: ..."`. A new value of a known code is created on the fly.
+`Category` takes `customFields` the same way.
+
+### Filter and read
+
+```php
+use Pobo\Sdk\Enum\IncludeContent;
+
+foreach ($client->iterateProducts(
+    include: [IncludeContent::CUSTOM_FIELD],
+    customField: ['segment' => ['wholesale', 'vip'], 'region' => 'cz'],
+) as $product) {
+    foreach ($product->customFields ?? [] as $field) {
+        echo $field->code, ': ', implode(', ', $field->values);
+    }
+}
+```
+
+- OR within one code, AND across codes: the example returns products that are
+  (`wholesale` **or** `vip`) **and** `cz`. At most 20 codes per request.
+- An unknown code or value matches nothing.
+- `$product->customFields` is `null` when `custom_field` was not requested via `include`.
+
+### Delete
+
+```php
+$client->deleteCustomFieldValues(['segment' => ['retail']]); // the value, from every product and category
+$client->deleteCustomFields(['region']);                     // the field with all its values
+```
+
+Both delete for good — products and categories lose the values right away.
 
 ## Multilang
 
@@ -455,16 +566,21 @@ try {
 | `importBrands(array $brands)`                                                   | Bulk import brands (max 100)     |
 | `importParameters(array $parameters)`                                           | Bulk import parameters (max 100) |
 | `importBlogs(array $blogs)`                                                     | Bulk import blogs (max 100)      |
+| `importCustomFields(array $customFields)`                                       | Bulk import custom fields (max 100, b2b) |
+| `multiImport(?customFields, ?parameters, ?categories, ?brands, ?products, ?blogs)` | Atomic import of several entity types (max 100 in total) |
 | `deleteProducts(array $ids)`                                                    | Bulk delete products (max 100)   |
 | `deleteCategories(array $ids)`                                                  | Bulk delete categories (max 100) |
 | `deleteBrands(array $ids)`                                                      | Bulk delete brands (max 100)     |
 | `deleteBlogs(array $ids)`                                                       | Bulk delete blogs (max 100)      |
-| `getProducts(?page, ?perPage, ?lastUpdateFrom, ?isEdited, ?include, ?lang)`     | Get products page                |
-| `getCategories(?page, ?perPage, ?lastUpdateFrom, ?isEdited, ?include, ?lang)`   | Get categories page              |
+| `deleteCustomFields(array $codes)`                                              | Delete custom fields (max 100, b2b) |
+| `deleteCustomFieldValues(array $valuesByCode)`                                  | Delete custom field values (max 100 codes, b2b) |
+| `getProducts(?page, ?perPage, ?lastUpdateFrom, ?isEdited, ?include, ?lang, ?customField)` | Get products page      |
+| `getCategories(?page, ?perPage, ?lastUpdateFrom, ?isEdited, ?include, ?lang, ?customField)` | Get categories page  |
 | `getBrands(?page, ?perPage, ?lastUpdateFrom, ?isEdited, ?include, ?lang)`       | Get brands page                  |
 | `getBlogs(?page, ?perPage, ?lastUpdateFrom, ?isEdited, ?include, ?lang)`        | Get blogs page                   |
-| `iterateProducts(?lastUpdateFrom, ?isEdited, ?include, ?lang)`                  | Iterate all products             |
-| `iterateCategories(?lastUpdateFrom, ?isEdited, ?include, ?lang)`                | Iterate all categories           |
+| `getCustomFields(?page, ?perPage)`                                              | Get custom fields page (b2b)     |
+| `iterateProducts(?lastUpdateFrom, ?isEdited, ?include, ?lang, ?customField)`    | Iterate all products             |
+| `iterateCategories(?lastUpdateFrom, ?isEdited, ?include, ?lang, ?customField)`  | Iterate all categories           |
 | `iterateBrands(?lastUpdateFrom, ?isEdited, ?include, ?lang)`                    | Iterate all brands               |
 | `iterateBlogs(?lastUpdateFrom, ?isEdited, ?include, ?lang)`                     | Iterate all blogs                |
 
@@ -481,6 +597,9 @@ try {
 | Image URL length             | 650 chars     |
 | Description length           | 500,000 chars |
 | SEO description length       | 500 chars     |
+| Custom field code length     | 64 chars      |
+| Custom field value length    | 255 chars     |
+| Custom field codes in filter | 20            |
 
 ## Testing
 
@@ -494,7 +613,7 @@ Unit tests are pure (no network) and run on every CI build across PHP 8.1–8.5.
 
 ### Integration tests
 
-Integration tests hit the real `api.pobo.space` API and verify that the SDK's wire format is in sync with the server. They require a dedicated test e-shop and a valid REST API token.
+Integration tests hit the real `api.pobo.space` API and verify that the SDK's wire format is in sync with the server. They require a dedicated **b2b** test e-shop (custom fields exist only there) and a valid REST API token.
 
 ```bash
 POBO_API_TOKEN="your-test-eshop-token" vendor/bin/phpunit --testsuite=Integration

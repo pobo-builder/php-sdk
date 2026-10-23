@@ -18,6 +18,7 @@ namespace Pobo\Sdk\DTO;
  *     site_link?: array<string, mixed>,
  *     rich_snippet?: array<string, mixed>,
  *     variant?: array<array{code: string, ean?: string|null}>,
+ *     custom_field?: array<array{code: string, value?: array<string>, name?: string|null}>|null,
  *     images?: array<string>,
  *     categories_ids?: array<string>,
  *     parameters_ids?: array<int>,
@@ -50,6 +51,7 @@ final class Product
      * @param array<int|string|null> $parametersIds Empty strings and nulls are filtered defensively
      * @param array<array{id: string, name: array<string, string>}> $categories
      * @param array<ProductVariant>|null $variants Null when `variant` was not requested via include, empty array when the product has no variants
+     * @param array<CustomFieldAssignment>|null $customFields b2b eshops only. Import: null = not sent (server keeps the values), [] = remove every value, a list = replace the whole set. Export: null when `custom_field` was not requested via include
      */
     public function __construct(
         public readonly string $id,
@@ -73,6 +75,7 @@ final class Product
         public readonly ?\DateTimeInterface $createdAt = null,
         public readonly ?\DateTimeInterface $updatedAt = null,
         public readonly ?array $variants = null,
+        public readonly ?array $customFields = null,
     ) {
         $this->categoriesIds = array_values(array_map(
             static fn(mixed $value): string => (string) $value,
@@ -134,6 +137,10 @@ final class Product
             $data['brand_id'] = $this->brandId;
         }
 
+        if ($this->customFields !== null) {
+            $data['custom_field'] = CustomFieldAssignment::toPayload($this->customFields);
+        }
+
         return $data;
     }
 
@@ -170,6 +177,7 @@ final class Product
                     $data['variant'],
                 )
                 : null,
+            customFields: isset($data['custom_field']) ? CustomFieldAssignment::listFromArray($data['custom_field']) : null,
         );
     }
 }

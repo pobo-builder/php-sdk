@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace Pobo\Sdk\DTO;
 
 /**
- * @template T of Product|Category|Blog|Brand
+ * @template T of Product|Category|Blog|Brand|CustomField
  */
 final class PaginatedResponse
 {
@@ -31,7 +31,7 @@ final class PaginatedResponse
     }
 
     /**
-     * @template TEntity of Product|Category|Blog|Brand
+     * @template TEntity of Product|Category|Blog|Brand|CustomField
      * @param array<string, mixed> $response
      * @param class-string<TEntity> $entityClass
      * @return self<TEntity>

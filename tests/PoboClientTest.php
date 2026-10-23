@@ -8,6 +8,8 @@ use PHPUnit\Framework\TestCase;
 use Pobo\Sdk\DTO\Blog;
 use Pobo\Sdk\DTO\Brand;
 use Pobo\Sdk\DTO\Category;
+use Pobo\Sdk\DTO\CustomField;
+use Pobo\Sdk\DTO\CustomFieldAssignment;
 use Pobo\Sdk\DTO\DeleteResult;
 use Pobo\Sdk\DTO\LocalizedString;
 use Pobo\Sdk\DTO\Parameter;
@@ -612,5 +614,144 @@ final class PoboClientTest extends TestCase
         );
 
         $this->assertSame('?include=site_link%2Crich_snippet', $query);
+    }
+
+    public function testImportCustomFieldsThrowsExceptionForEmptyArray(): void
+    {
+        $this->expectException(ValidationException::class);
+
+        $this->client->importCustomFields([]);
+    }
+
+    public function testDeleteCustomFieldsThrowsExceptionForTooManyItems(): void
+    {
+        $this->expectException(ValidationException::class);
+        $this->expectExceptionMessage('Too many items: 101 provided, maximum is 100');
+
+        $this->client->deleteCustomFields(array_map(static fn(int $i): string => sprintf('code_%d', $i), range(1, 101)));
+    }
+
+    public function testDeleteCustomFieldValuesThrowsExceptionForEmptyArray(): void
+    {
+        $this->expectException(ValidationException::class);
+
+        $this->client->deleteCustomFieldValues([]);
+    }
+
+    public function testBuildQueryParamsWithCustomFieldUsesArrayForm(): void
+    {
+        $method = new \ReflectionMethod(PoboClient::class, 'buildQueryParams');
+
+        $query = $method->invoke(
+            $this->client,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            ['segment' => ['wholesale', 'vip'], 'size' => '1,5 l'],
+        );
+
+        $this->assertIsString($query);
+        parse_str(ltrim($query, '?'), $parsed);
+        $this->assertSame(
+            ['custom_field' => ['segment' => ['wholesale', 'vip'], 'size' => ['1,5 l']]],
+            $parsed,
+        );
+    }
+
+    public function testBuildQueryParamsWithEmptyCustomFieldReturnsEmpty(): void
+    {
+        $method = new \ReflectionMethod(PoboClient::class, 'buildQueryParams');
+
+        $query = $method->invoke($this->client, null, null, null, null, null, null, []);
+
+        $this->assertSame('', $query);
+    }
+
+    public function testDeleteCustomFieldValuesThrowsExceptionForTooManyCodes(): void
+    {
+        $valuesByCode = [];
+        foreach (range(1, 101) as $i) {
+            $valuesByCode[sprintf('code_%d', $i)] = ['x'];
+        }
+
+        $this->expectException(ValidationException::class);
+        $this->expectExceptionMessage('Too many items: 101 provided, maximum is 100');
+
+        $this->client->deleteCustomFieldValues($valuesByCode);
+    }
+
+    public function testCustomFieldDeletePayload(): void
+    {
+        $method = new \ReflectionMethod(PoboClient::class, 'buildCustomFieldDeletePayload');
+
+        $this->assertSame(
+            [['code' => 'segment'], ['code' => 'region']],
+            $method->invoke($this->client, ['segment', 'region']),
+        );
+    }
+
+    public function testCustomFieldValueDeletePayload(): void
+    {
+        $method = new \ReflectionMethod(PoboClient::class, 'buildCustomFieldValueDeletePayload');
+
+        $this->assertSame(
+            [
+                ['code' => 'segment', 'value' => ['retail', 'vip']],
+                ['code' => 'region', 'value' => ['sk']],
+            ],
+            $method->invoke($this->client, ['segment' => ['retail', 'vip'], 'region' => [3 => 'sk']]),
+        );
+    }
+
+    public function testMultiImportThrowsExceptionForEmptyPayload(): void
+    {
+        $this->expectException(ValidationException::class);
+        $this->expectExceptionMessage('Payload cannot be empty');
+
+        $this->client->multiImport();
+    }
+
+    public function testMultiImportCountsItemsAcrossSections(): void
+    {
+        $products = array_fill(0, 60, ['id' => 'P']);
+        $categories = array_fill(0, 41, ['id' => 'C']);
+
+        $this->expectException(ValidationException::class);
+        $this->expectExceptionMessage('Too many items: 101 provided, maximum is 100');
+
+        $this->client->multiImport(categories: $categories, products: $products);
+    }
+
+    public function testMultiImportPayloadConvertsDtosAndSkipsEmptySections(): void
+    {
+        $method = new \ReflectionMethod(PoboClient::class, 'buildMultiImportPayload');
+
+        $payload = $method->invoke(
+            $this->client,
+            [new CustomField(code: 'segment', name: 'Segment', values: ['vip'])],
+            [],
+            [],
+            [],
+            [
+                new Product(
+                    id: 'P-1',
+                    isVisible: true,
+                    name: LocalizedString::create('Product'),
+                    url: LocalizedString::create('https://example.com/p-1'),
+                    customFields: [new CustomFieldAssignment(code: 'segment', values: ['vip'])],
+                ),
+                ['id' => 'P-2', 'is_visible' => true],
+            ],
+            [],
+        );
+
+        $this->assertIsArray($payload);
+        $this->assertSame(['custom_fields', 'products'], array_keys($payload));
+        $this->assertSame([['code' => 'segment', 'name' => 'Segment', 'value' => ['vip']]], $payload['custom_fields']);
+        $this->assertSame([['code' => 'segment', 'value' => ['vip']]], $payload['products'][0]['custom_field']);
+        $this->assertSame(['id' => 'P-2', 'is_visible' => true], $payload['products'][1]);
     }
 }
